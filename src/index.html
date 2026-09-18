@@ -949,6 +949,27 @@
                 </div>
               </div>
 
+              <!-- Running bill, shown on the choosing steps so the price
+                   reacts as you pick. Step 5 is the full receipt, so this
+                   would only repeat it there. -->
+              <div class="calc-live-bill" id="calcLiveBill" hidden>
+                <div class="live-bill-row">
+                  <span class="live-bill-label">Monthly rent</span>
+                  <span class="live-bill-val" id="liveMonthly">₹8,500</span>
+                </div>
+                <div class="live-bill-row is-total">
+                  <span class="live-bill-label">Payable on move-in
+                    <em class="live-bill-scope" id="liveMoveInScope">First month's rent + deposit</em>
+                  </span>
+                  <span class="live-bill-val" id="liveTotal">₹17,000</span>
+                </div>
+                <div class="live-bill-row">
+                  <span class="live-bill-label">Security deposit <em class="sub-note">refundable</em></span>
+                  <span class="live-bill-val" id="liveDeposit">₹8,500</span>
+                </div>
+                <p class="live-bill-note">The security deposit is 100% refundable upon move-out.</p>
+              </div>
+
             </div>
 
             <!-- Right: Dynamic Sticky Minimal Bill Summary -->
@@ -1035,27 +1056,6 @@
                 </div>
 
               </div>
-            </div>
-
-            <!-- Running bill, shown on the choosing steps so the price
-                 reacts as you pick. Step 5 is the full receipt, so this
-                 would only repeat it there. -->
-            <div class="calc-live-bill" id="calcLiveBill" hidden>
-              <div class="live-bill-row">
-                <span class="live-bill-label">Monthly rent</span>
-                <span class="live-bill-val" id="liveMonthly">₹8,500</span>
-              </div>
-              <div class="live-bill-row is-total">
-                <span class="live-bill-label">Payable on move-in
-                  <em class="live-bill-scope" id="liveMoveInScope">First month's rent + deposit</em>
-                </span>
-                <span class="live-bill-val" id="liveTotal">₹17,000</span>
-              </div>
-              <div class="live-bill-row">
-                <span class="live-bill-label">Security deposit <em class="sub-note">refundable</em></span>
-                <span class="live-bill-val" id="liveDeposit">₹8,500</span>
-              </div>
-              <p class="live-bill-note">The security deposit is 100% refundable upon move-out.</p>
             </div>
 
             <!-- Stepper controls; hidden on desktop, where every step is

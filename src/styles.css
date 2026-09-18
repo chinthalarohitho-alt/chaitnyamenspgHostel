@@ -9448,9 +9448,21 @@ select:autofill {
      step holds the frame still; 520px is just over the tallest of the
      short steps, so the spread across all five drops to ~13px on a
      Pixel 8 and ~64px on a 360px phone. */
-  .calc-group:not(.is-step-hidden),
-  .calc-summary:not(.is-step-hidden) {
+  .calc-controls {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .calc-controls:has(.calc-group:not(.is-step-hidden)) {
+    min-height: 554px;
+  }
+
+  .calc-group:not(.is-step-hidden) {
     min-height: auto;
+  }
+
+  .calc-summary:not(.is-step-hidden) {
+    min-height: 504px;
   }
 
   .calc-steps-nav:not([hidden]) {
@@ -9592,7 +9604,7 @@ select:autofill {
 @media (max-width: 768px) {
   .calc-live-bill:not([hidden]) {
     display: block;
-    margin-top: 4px;
+    margin-top: auto;
     padding: 14px 16px;
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.035);
