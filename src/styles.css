@@ -8729,8 +8729,8 @@ select:autofill {
   /* ---- Summary ---- */
   .calc-layout {
     grid-template-columns: 1fr;
-    gap: 22px;
-    margin-top: 22px;
+    gap: 14px;
+    margin-top: 20px;
   }
 
   /* Sticky belongs to a two-column layout; stacked, it would pin the
@@ -9450,11 +9450,8 @@ select:autofill {
      Pixel 8 and ~64px on a 360px phone. */
   .calc-group:not(.is-step-hidden),
   .calc-summary:not(.is-step-hidden) {
-    min-height: 520px;
+    min-height: auto;
   }
-
-  /* Nothing to gain from padding the tallest step further. */
-  .calc-summary:not(.is-step-hidden) { min-height: 0; }
 
   .calc-steps-nav:not([hidden]) {
     display: flex;
@@ -9595,7 +9592,7 @@ select:autofill {
 @media (max-width: 768px) {
   .calc-live-bill:not([hidden]) {
     display: block;
-    margin-top: 18px;
+    margin-top: 4px;
     padding: 14px 16px;
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.035);
@@ -9644,8 +9641,8 @@ select:autofill {
     color: rgba(255, 255, 255, 0.45);
   }
 
-  /* With the bill occupying the slack, the steps need less padding. */
-  .calc-group:not(.is-step-hidden) { min-height: 380px; }
+  /* Keep steps compact without dead vertical space. */
+  .calc-group:not(.is-step-hidden) { min-height: auto; }
 }
 
 /* The term the move-in figure covers, under its label. */
