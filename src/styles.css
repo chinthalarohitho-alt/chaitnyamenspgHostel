@@ -9462,7 +9462,7 @@ select:autofill {
   }
 
   .calc-summary:not(.is-step-hidden) {
-    min-height: 504px;
+    min-height: auto;
   }
 
   .calc-steps-nav:not([hidden]) {
@@ -9536,60 +9536,156 @@ select:autofill {
     flex: 1 1 100%;
   }
 
-  /* The receipt rows are desktop two-column rows; squeezed to 380px the
-     label, the chip and the figure all wrapped into each other. */
-  .minimal-receipt-card { padding: 16px 14px; }
-
-  .receipt-header {
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 12px;
+  /* ---- Step 5: Redesigned Sleek Mobile Booking Summary & Confirm ---- */
+  .minimal-receipt-card {
+    padding: 13px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.09);
   }
 
-  .receipt-title { font-size: 0.74rem; letter-spacing: 0.08em; }
-  .receipt-badge { font-size: 0.72rem; white-space: nowrap; }
+  .receipt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding-bottom: 7px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .receipt-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .receipt-badge {
+    font-size: 0.68rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgba(52, 211, 153, 0.1);
+    border: 1px solid rgba(52, 211, 153, 0.25);
+    color: #34d399;
+    white-space: nowrap;
+  }
+
+  .receipt-items-list,
+  .receipt-subtotals-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
 
   .receipt-row {
-    gap: 10px;
-    align-items: baseline;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 2px 0;
   }
 
   .receipt-item-info {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 6px;
-    flex-wrap: wrap;
     min-width: 0;
   }
 
-  .item-name { font-size: 0.86rem; }
+  .item-name,
+  .sub-label {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
 
   .item-pill {
-    font-size: 0.68rem;
-    padding: 2px 7px;
+    font-size: 0.62rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.85);
     white-space: nowrap;
   }
 
   .receipt-item-val,
   .sub-val {
-    font-size: 0.88rem;
+    font-size: 0.82rem;
+    font-weight: 700;
     white-space: nowrap;
     flex-shrink: 0;
+    color: #fff;
   }
 
-  .sub-label { font-size: 0.84rem; }
-  .sub-note { font-size: 0.62rem; }
+  .sub-note {
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.45);
+  }
 
-  /* The grand total is the one line that should stay large, but it was
-     wrapping "Total Payable on Move-In" across two lines beside the
-     figure. Stacked, both read cleanly. */
+  .receipt-dashed-divider {
+    margin: 6px 0;
+    border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  }
+
+  /* Compact highlighted Move-in Total bar */
   .receipt-total-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 9px 12px;
+    margin: 8px 0;
+    background: rgba(255, 107, 0, 0.08);
+    border: 1px solid rgba(255, 107, 0, 0.22);
+    border-radius: 10px;
   }
 
-  .grand-label { font-size: 0.92rem; line-height: 1.2; }
+  .grand-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #ffffff;
+  }
+
+  .grand-scope {
+    font-size: 0.62rem;
+    color: rgba(255, 255, 255, 0.55);
+    margin-top: 1px;
+  }
+
+  .grand-val {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--primary);
+    white-space: nowrap;
+  }
+
+  /* Compact Mobile Action Buttons */
+  .receipt-actions {
+    margin-top: 8px;
+    gap: 7px;
+  }
+
+  .receipt-actions .rsv-submit-btn {
+    padding: 11px 16px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    border-radius: 10px;
+    gap: 8px;
+    box-shadow: 0 3px 12px rgba(255, 107, 0, 0.25);
+  }
+
+  .receipt-actions .rsv-submit-btn i {
+    font-size: 0.85rem;
+  }
+
+  .receipt-actions .rsv-wa-shortcut {
+    padding: 8px 12px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    border-radius: 8px;
+    gap: 6px;
+  }
 }
 
 /* ===================================================================
