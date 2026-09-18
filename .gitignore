@@ -1,0 +1,10 @@
+.vercel
+.env
+.env.local
+node_modules
+dist
+supabase/.env
+.DS_Store
+*.qlpreview
+*.pdf
+*.eml

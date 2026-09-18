@@ -1,0 +1,26 @@
+{
+  "name": "chaitanya-hostel-site",
+  "version": "1.0.0",
+  "description": "Chaitanya Mens PG & Hostel — public site with a Supabase-backed manager portal",
+  "main": "src/app.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:email": "node test-invoice-email.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "vite": "^8.0.14"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
+    "lottie-web": "^5.13.0",
+    "nodemailer": "^10.0.10",
+    "pdf-lib": "^1.17.1",
+    "qrcode": "^1.5.4"
+  }
+}

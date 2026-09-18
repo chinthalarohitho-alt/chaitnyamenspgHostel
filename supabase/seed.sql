@@ -1,0 +1,9 @@
+insert into public.site_config (id, pricing, texts, photos, inventory)
+values (
+  'main',
+  '{"doubleBase":8500,"doubleAcAdd":1500,"tripleBase":6500,"tripleAcAdd":1000,"fourBase":5500,"fourAcAdd":800,"fiveBase":4800,"fiveAcAdd":600,"disc3m":5,"disc6m":10,"disc12m":15}'::jsonb,
+  '{"hostelName":"Chaitanya Mens PG & Hostel","heroHeadline":"STAY | STUDY | GROW","phone":"+91 99497 85344","whatsapp":"919949785344","email":"jareenaworks@gmail.com","address":"18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, NGO''s Colony, Naimnagar, Hanamkonda, Telangana – 506001","landmark":"Landmark: Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar","visitingHours":"24 hrs","openingNotice":"Opening 1st Oct • 2, 3, 4 & 5 Sharing Beds"}'::jsonb,
+  '{"cinematicImg":"assets/hostel-exterior.jpg","doubleImg":"https://images.unsplash.com/photo-1616594039964-ae9021a400a0?auto=format&fit=crop&w=1200&q=80","tripleImg":"https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=1200&q=80","studyImg":"https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?auto=format&fit=crop&w=800&q=80","terraceImg":"https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?auto=format&fit=crop&w=800&q=80","execImg":"https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=800&q=80","diningImg":"https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80","kitchenImg":"https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80","laundryImg":"https://images.unsplash.com/photo-1545173168-9f1947eebb7f?auto=format&fit=crop&w=800&q=80","securityImg":"https://images.unsplash.com/photo-1557597774-9d273605dfa9?auto=format&fit=crop&w=800&q=80"}'::jsonb,
+  '{"double":2,"triple":3,"four":4,"five":3}'::jsonb
+)
+on conflict (id) do nothing;
