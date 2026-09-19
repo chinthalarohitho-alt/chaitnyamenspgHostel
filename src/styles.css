@@ -5,40 +5,40 @@
 
 /* 1. CSS VARIABLES & DESIGN TOKENS (BLACK, WHITE & ORANGE THEME) */
 :root {
-  --primary: #ff6b00;             /* Radiant Vibrant Orange */
-  --primary-hover: #ff8533;       /* Bright Orange Hover */
-  --primary-light: rgba(255, 107, 0, 0.14);
-  --primary-glow: rgba(255, 107, 0, 0.45);
+  --primary: #f97316;             /* Modern Vibrant Orange */
+  --primary-hover: #ea580c;       /* Deep Orange Hover */
+  --primary-light: rgba(249, 115, 22, 0.14);
+  --primary-glow: rgba(249, 115, 22, 0.45);
   
   --secondary: #a1a1aa;           /* Slate Zinc */
   --secondary-light: rgba(255, 255, 255, 0.08);
 
-  --accent: #ff9100;              /* Bright Amber Orange */
-  --accent-light: rgba(255, 145, 0, 0.16);
-  --success: #10b981;             /* Emerald Vacancy */
-  --success-dark: #059669;
-  --success-light: rgba(16, 185, 129, 0.16);
-  --warning: #ff9100;
+  --accent: #f97316;              /* Bright Amber Orange */
+  --accent-light: rgba(249, 115, 22, 0.16);
+  --success: #22c55e;             /* Emerald Vacancy */
+  --success-dark: #16a34a;
+  --success-light: rgba(34, 197, 94, 0.16);
+  --warning: #f59e0b;
   --danger: #f43f5e;
-  --whatsapp: #25d366;
-  --whatsapp-hover: #1ebd5a;
+  --whatsapp: #22c55e;
+  --whatsapp-hover: #16a34a;
 
-  --bg-body: #060709;             /* Pitch Obsidian Canvas */
-  --bg-card: #121316;             /* Surface Card */
-  --bg-card-subtle: #181a1f;      /* Elevated Card Layer */
-  --bg-dark: #000000;             /* Pure Pitch Black */
-  --bg-dark-card: #121316;
-  --bg-subtle: #181a1f;
+  --bg-body: #0d0f12;             /* Refined Dark Charcoal Canvas */
+  --bg-card: #121418;             /* Surface Card */
+  --bg-card-subtle: #171a20;      /* Elevated Card Layer */
+  --bg-dark: #090a0d;             /* Pure Pitch Black replacement */
+  --bg-dark-card: #121418;
+  --bg-subtle: #171a20;
 
-  --text-main: #ffffff;           /* Crisp Pure White */
+  --text-main: #f5f5f5;           /* Crisp High-Contrast Off-White */
   --text-muted: #a1a1aa;          /* High-legibility Zinc */
   --text-light: #71717a;          /* Muted Gray */
   --text-white: #ffffff;
 
-  --border-color: rgba(255, 255, 255, 0.12);
-  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-color: #292d33;        /* Dark Charcoal Border */
+  --border-subtle: rgba(41, 45, 51, 0.6);
   --border-dark: rgba(255, 255, 255, 0.22);
-  --border-focus: #ff6b00;
+  --border-focus: #f97316;
 
   --radius-xs: 6px;
   --radius-sm: 12px;
@@ -1619,8 +1619,8 @@ ul {
   display: flex;
   align-items: center;
   gap: 16px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(249, 115, 22, 0.05);
+  border: 1px solid rgba(249, 115, 22, 0.2);
   border-radius: var(--radius-sm);
   padding: 14px 18px;
 }
@@ -1629,8 +1629,9 @@ ul {
   width: 42px;
   height: 42px;
   border-radius: var(--radius-sm);
-  background: #10b981;
-  color: #ffffff;
+  background: rgba(249, 115, 22, 0.12);
+  color: var(--primary);
+  border: 1px solid rgba(249, 115, 22, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1652,13 +1653,14 @@ ul {
 
 .food-fixed-text span {
   font-size: 0.8rem;
-  color: #34d399;
+  color: var(--text-muted);
   line-height: 1.4;
 }
 
 .food-fixed-badge {
-  background: #10b981;
-  color: #ffffff;
+  background: rgba(249, 115, 22, 0.12);
+  color: var(--primary);
+  border: 1px solid rgba(249, 115, 22, 0.28);
   font-size: 0.74rem;
   font-weight: 700;
   padding: 5px 10px;
@@ -1779,9 +1781,9 @@ ul {
   gap: 6px;
   font-size: 0.76rem;
   font-weight: 700;
-  color: #4ade80;
-  background: rgba(34, 197, 94, 0.12);
-  border: 1px solid rgba(34, 197, 94, 0.25);
+  color: var(--primary);
+  background: rgba(249, 115, 22, 0.12);
+  border: 1px solid rgba(249, 115, 22, 0.3);
   padding: 3px 10px;
   border-radius: var(--radius-full);
 }
@@ -1789,9 +1791,9 @@ ul {
 .summary-live-dot {
   width: 7px;
   height: 7px;
-  background: #22c55e;
+  background: var(--primary);
   border-radius: 50%;
-  box-shadow: 0 0 6px #22c55e;
+  box-shadow: 0 0 6px rgba(249, 115, 22, 0.6);
   animation: pulseLiveDot 1.8s infinite;
 }
 
@@ -5242,7 +5244,7 @@ select.rsv-input,
    =================================================================== */
 .routine-section {
   padding: 90px 0 120px 0;
-  background: #060709;
+  background: var(--bg-body);
   background-image: 
     radial-gradient(circle at 50% 0%, rgba(255, 107, 0, 0.12) 0%, transparent 60%),
     radial-gradient(circle at 85% 45%, rgba(255, 107, 0, 0.05) 0%, transparent 50%),
@@ -6907,8 +6909,8 @@ select.rsv-input,
    #ca4e00 is the most saturated orange that still clears AA (4.56:1).
    =================================================================== */
 :root {
-  --primary-fill: #ca4e00;        /* white text: 4.56:1 — WCAG AA */
-  --primary-fill-hover: #b84a00;  /* white text: 5.23:1 */
+  --primary-fill: #f97316;        /* Primary CTA Vibrant Orange */
+  --primary-fill-hover: #ea580c;  /* Primary Hover Deep Orange */
 }
 
 .btn-primary,
@@ -9905,9 +9907,9 @@ select:autofill {
     font-size: 0.68rem;
     padding: 2px 8px;
     border-radius: 999px;
-    background: rgba(52, 211, 153, 0.1);
-    border: 1px solid rgba(52, 211, 153, 0.25);
-    color: #34d399;
+    background: rgba(249, 115, 22, 0.1);
+    border: 1px solid rgba(249, 115, 22, 0.28);
+    color: var(--primary);
     white-space: nowrap;
   }
 
