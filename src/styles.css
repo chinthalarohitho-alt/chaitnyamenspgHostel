@@ -7196,10 +7196,240 @@ select.rsv-input,
   transform: translateY(0);
 }
 
-@media (max-width: 420px) {
-  #confirmationModal .confirm-head { padding: 30px 20px 16px; }
-  #confirmationModal .confirm-body { padding: 0 20px 22px; }
-  #confirmationModal .confirm-ref { flex-direction: column; align-items: flex-start; gap: 4px; }
+/* ===================================================================
+   CONFIRMATION MODAL — COMPACT MOBILE LAYOUT (FIT WITHOUT SCROLLING)
+   -------------------------------------------------------------------
+   On mobile devices, all 3 steps of the confirmation/payment flow
+   must fit completely within the viewport without requiring vertical
+   scrolling. Tighten margins, header icon, reference pill, 2-column
+   booking details, and action button heights.
+   =================================================================== */
+@media (max-width: 600px) {
+  .booking-modal.confirm-modal {
+    padding: 10px 8px;
+  }
+
+  #confirmationModal .confirm-dialog {
+    max-width: 390px;
+    width: 100%;
+    border-radius: 16px;
+    max-height: 96vh;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  }
+
+  #confirmationModal .confirm-close {
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+  }
+
+  /* Compact 3-step progress indicator */
+  #confirmationModal .cstep-bar {
+    padding: 12px 16px 2px;
+    gap: 2px;
+  }
+
+  #confirmationModal .cstep-dot {
+    gap: 3px;
+    font-size: 0.62rem;
+  }
+
+  #confirmationModal .cstep-dot span {
+    width: 22px;
+    height: 22px;
+    font-size: 0.68rem;
+  }
+
+  #confirmationModal .cstep-dot::after {
+    top: 11px;
+    left: calc(50% + 14px);
+    right: calc(-50% + 14px);
+  }
+
+  /* Compact header */
+  #confirmationModal .confirm-head {
+    padding: 8px 16px 4px;
+  }
+
+  #confirmationModal .confirm-check {
+    width: 38px;
+    height: 38px;
+  }
+
+  #confirmationModal .confirm-head h3 {
+    margin: 5px 0 2px;
+    font-size: 1.15rem;
+  }
+
+  #confirmationModal .confirm-sub {
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+
+  #confirmationModal .confirm-body {
+    padding: 0 14px 14px;
+  }
+
+  /* Reference banner */
+  #confirmationModal .confirm-ref {
+    padding: 7px 12px;
+    border-radius: 9px;
+    margin-bottom: 8px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #confirmationModal .confirm-ref-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+  }
+
+  #confirmationModal .confirm-ref-code {
+    font-size: 0.95rem;
+  }
+
+  /* Compact 2-column details grid */
+  #confirmationModal .confirm-details {
+    margin: 0 0 9px;
+    border-radius: 9px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+  }
+
+  #confirmationModal .confirm-details > div {
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1px;
+    background: #11141a;
+  }
+
+  #confirmationModal .confirm-details dt {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0;
+  }
+
+  #confirmationModal .confirm-details dd {
+    font-size: 0.81rem;
+    font-weight: 600;
+    text-align: left;
+    color: #fff;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  #confirmationModal #modalMoveInTotal {
+    color: var(--primary-light, #ff8533);
+    font-weight: 700;
+  }
+
+  /* Compact Actions */
+  #confirmationModal .cstep-actions {
+    gap: 7px;
+    margin-top: 8px;
+  }
+
+  #confirmationModal .cstep-next {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    border-radius: 10px;
+    min-height: 40px;
+  }
+
+  #confirmationModal .confirm-wa {
+    padding: 9px 14px;
+    font-size: 0.83rem;
+    border-radius: 10px;
+    min-height: 38px;
+  }
+
+  #confirmationModal .confirm-done {
+    padding: 9px 14px;
+    font-size: 0.83rem;
+    border-radius: 10px;
+    min-height: 38px;
+  }
+
+  /* Step 2 (UPI Payment) on mobile */
+  #confirmationModal .cstep[data-step="2"] .confirm-head {
+    padding-top: 6px;
+  }
+
+  #confirmationModal .cstep[data-step="2"] #upiQr {
+    width: 130px !important;
+    height: 130px !important;
+  }
+
+  #confirmationModal .upi-vpa {
+    padding: 5px 10px;
+    margin-top: 6px;
+    font-size: 0.78rem;
+  }
+
+  #confirmationModal .upi-open {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    margin-top: 6px;
+    border-radius: 8px;
+  }
+
+  #confirmationModal .cstep-skip {
+    padding: 5px;
+    font-size: 0.78rem;
+  }
+
+  /* Step 3 (Confirm UTR) on mobile */
+  #confirmationModal .cstep[data-step="3"] .confirm-head {
+    padding-top: 6px;
+  }
+
+  #confirmationModal .upi-utr {
+    margin-top: 8px;
+  }
+
+  #confirmationModal .upi-utr-row {
+    gap: 8px;
+  }
+
+  #confirmationModal .upi-utr input {
+    padding: 9px 12px;
+    font-size: 0.88rem;
+  }
+
+  #confirmationModal .upi-submit {
+    padding: 9px 14px;
+    font-size: 0.82rem;
+  }
+
+  #confirmationModal .upi-note {
+    font-size: 0.73rem;
+    margin: 6px 0 8px;
+    line-height: 1.35;
+  }
+
+  #confirmationModal .cstep-invoice-action {
+    margin: 8px 0 6px;
+  }
+
+  #confirmationModal .confirm-download-invoice {
+    padding: 9px 14px;
+    font-size: 0.83rem;
+    border-radius: 10px;
+  }
 }
 
 /* ===================================================================
@@ -7793,11 +8023,7 @@ select.rsv-input,
 #confirmationModal .cstep[data-step="2"] .upi-qr-wrap { justify-content: center; }
 #confirmationModal .cstep[data-step="2"] #upiQr { width: 176px; height: 176px; }
 
-@media (max-width: 420px) {
-  #confirmationModal .cstep-bar { padding: 18px 14px 2px; }
-  #confirmationModal .cstep-dot em { font-size: 0.62rem; }
-  #confirmationModal .cstep[data-step="2"] #upiQr { width: 152px; height: 152px; }
-}
+
 
 /* -------------------------------------------------------------------
    Stable dialog height across steps.
