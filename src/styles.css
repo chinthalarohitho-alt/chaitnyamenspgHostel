@@ -7908,14 +7908,18 @@ select.rsv-input,
     position: sticky;
     top: 0;
     z-index: 10;
-    background: #15181e;
-    padding: 10px 14px 4px !important;
+    background: #11141a;
+    padding: 8px 16px 2px !important;
+    max-width: 240px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
     gap: 2px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: none;
   }
 
   #confirmationModal .cstep-dot {
-    gap: 3px;
+    gap: 2px;
     font-size: 0.62rem;
   }
 
@@ -7927,29 +7931,29 @@ select.rsv-input,
 
   #confirmationModal .cstep-dot::after {
     top: 11px;
-    left: calc(50% + 14px);
-    right: calc(-50% + 14px);
+    left: calc(50% + 13px);
+    right: calc(-50% + 13px);
   }
 
   /* Compact header across steps */
   #confirmationModal .confirm-head {
-    padding: 6px 14px 3px !important;
+    padding: 3px 14px 2px !important;
   }
 
   #confirmationModal .confirm-check {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
   }
 
   #confirmationModal .confirm-head h3 {
-    margin: 4px 0 2px;
-    font-size: 1.1rem;
+    margin: 2px 0 1px;
+    font-size: 1.06rem;
   }
 
   #confirmationModal .confirm-sub {
-    font-size: 0.73rem;
-    line-height: 1.35;
-    margin: 0 0 4px;
+    font-size: 0.72rem;
+    line-height: 1.25;
+    margin: 0 0 3px;
   }
 
   #confirmationModal .confirm-body {
@@ -7958,27 +7962,27 @@ select.rsv-input,
 
   /* Step 1: Reference banner */
   #confirmationModal .confirm-ref {
-    padding: 6px 10px;
-    border-radius: 8px;
-    margin-bottom: 6px;
+    padding: 3.5px 10px;
+    border-radius: 6px;
+    margin-bottom: 3px;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
   }
 
   #confirmationModal .confirm-ref-label {
-    font-size: 0.64rem;
+    font-size: 0.62rem;
     letter-spacing: 0.08em;
   }
 
   #confirmationModal .confirm-ref-code {
-    font-size: 0.9rem;
+    font-size: 0.88rem;
   }
 
   /* Step 1: Compact 2-column details grid */
   #confirmationModal .confirm-details {
-    margin: 0 0 8px;
-    border-radius: 8px;
+    margin: 0 0 5px;
+    border-radius: 7px;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1px;
@@ -7987,29 +7991,31 @@ select.rsv-input,
   }
 
   #confirmationModal .confirm-details > div {
-    padding: 5px 8px;
+    padding: 2.5px 8px;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     justify-content: center;
-    gap: 1px;
+    gap: 0px;
     background: #11141a;
   }
 
   #confirmationModal .confirm-details dt {
-    font-size: 0.62rem;
+    font-size: 0.58rem;
     color: rgba(255, 255, 255, 0.45);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     margin: 0;
+    line-height: 1.15;
   }
 
   #confirmationModal .confirm-details dd {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 600;
     text-align: left;
     color: #fff;
     margin: 0;
+    line-height: 1.25;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
