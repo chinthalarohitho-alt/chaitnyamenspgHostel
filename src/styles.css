@@ -7698,8 +7698,11 @@ select.rsv-input,
   align-items: flex-start;
   gap: 4px;
   list-style: none;
-  margin: 0;
-  padding: 22px 24px 4px;
+  margin: 0 auto;
+  max-width: 260px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 20px 16px 4px;
 }
 
 #confirmationModal .cstep-dot {
@@ -7919,9 +7922,9 @@ select.rsv-input,
     top: 0;
     z-index: 10;
     background: #11141a;
-    padding: 8px 16px 2px !important;
-    max-width: 240px;
-    margin: 0 auto;
+    padding: 8px 6px 2px !important;
+    max-width: 190px !important;
+    margin: 0 auto !important;
     width: 100%;
     box-sizing: border-box;
     gap: 2px;
@@ -7941,8 +7944,8 @@ select.rsv-input,
 
   #confirmationModal .cstep-dot::after {
     top: 11px;
-    left: calc(50% + 13px);
-    right: calc(-50% + 13px);
+    left: calc(50% + 12px);
+    right: calc(-50% + 12px);
   }
 
   /* Compact header across steps */
