@@ -385,7 +385,7 @@ ul {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  height: 74px;
+  height: 78px;
   width: 100%;
 }
 
@@ -399,24 +399,24 @@ ul {
 }
 
 .brand-logo-img {
-  height: 48px;
+  height: 62px;
   width: auto;
-  max-width: 140px;
+  max-width: 220px;
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 16px rgba(202, 78, 0, 0.15));
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), filter 0.25s ease;
 }
 
 .brand-logo:hover .brand-logo-img {
   transform: scale(1.04);
-  filter: drop-shadow(0 4px 14px rgba(202, 78, 0, 0.35));
+  filter: drop-shadow(0 4px 16px rgba(202, 78, 0, 0.45));
 }
 
 .footer-brand-img {
-  height: 56px;
-  max-width: 160px;
-  margin-bottom: 6px;
+  height: 84px;
+  max-width: 260px;
+  margin-bottom: 12px;
 }
 
 .brand-icon {
@@ -6674,8 +6674,8 @@ select.rsv-input,
   }
 
   .brand-logo-img {
-    height: 38px;
-    max-width: 110px;
+    height: 46px;
+    max-width: 145px;
   }
 }
 
@@ -6683,8 +6683,8 @@ select.rsv-input,
   .brand-name { font-size: 0.95rem; }
   .brand-tagline { font-size: 0.56rem; letter-spacing: 0.4px; }
   .brand-logo-img {
-    height: 34px;
-    max-width: 95px;
+    height: 42px;
+    max-width: 130px;
   }
 }
 
@@ -7115,6 +7115,12 @@ select.rsv-input,
   word-break: break-word;
 }
 
+#confirmationModal #modalMoveInTotal {
+  color: #ff8533;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(255, 133, 51, 0.35);
+}
+
 #confirmationModal .confirm-actions {
   display: grid;
   gap: 10px;
@@ -7194,242 +7200,6 @@ select.rsv-input,
 
 #confirmationModal .confirm-download-invoice:active {
   transform: translateY(0);
-}
-
-/* ===================================================================
-   CONFIRMATION MODAL — COMPACT MOBILE LAYOUT (FIT WITHOUT SCROLLING)
-   -------------------------------------------------------------------
-   On mobile devices, all 3 steps of the confirmation/payment flow
-   must fit completely within the viewport without requiring vertical
-   scrolling. Tighten margins, header icon, reference pill, 2-column
-   booking details, and action button heights.
-   =================================================================== */
-@media (max-width: 600px) {
-  .booking-modal.confirm-modal {
-    padding: 10px 8px;
-  }
-
-  #confirmationModal .confirm-dialog {
-    max-width: 390px;
-    width: 100%;
-    border-radius: 16px;
-    max-height: 96vh;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
-  }
-
-  #confirmationModal .confirm-close {
-    top: 8px;
-    right: 8px;
-    width: 28px;
-    height: 28px;
-    font-size: 13px;
-  }
-
-  /* Compact 3-step progress indicator */
-  #confirmationModal .cstep-bar {
-    padding: 12px 16px 2px;
-    gap: 2px;
-  }
-
-  #confirmationModal .cstep-dot {
-    gap: 3px;
-    font-size: 0.62rem;
-  }
-
-  #confirmationModal .cstep-dot span {
-    width: 22px;
-    height: 22px;
-    font-size: 0.68rem;
-  }
-
-  #confirmationModal .cstep-dot::after {
-    top: 11px;
-    left: calc(50% + 14px);
-    right: calc(-50% + 14px);
-  }
-
-  /* Compact header */
-  #confirmationModal .confirm-head {
-    padding: 8px 16px 4px;
-  }
-
-  #confirmationModal .confirm-check {
-    width: 38px;
-    height: 38px;
-  }
-
-  #confirmationModal .confirm-head h3 {
-    margin: 5px 0 2px;
-    font-size: 1.15rem;
-  }
-
-  #confirmationModal .confirm-sub {
-    font-size: 0.75rem;
-    line-height: 1.35;
-  }
-
-  #confirmationModal .confirm-body {
-    padding: 0 14px 14px;
-  }
-
-  /* Reference banner */
-  #confirmationModal .confirm-ref {
-    padding: 7px 12px;
-    border-radius: 9px;
-    margin-bottom: 8px;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  #confirmationModal .confirm-ref-label {
-    font-size: 0.65rem;
-    letter-spacing: 0.08em;
-  }
-
-  #confirmationModal .confirm-ref-code {
-    font-size: 0.95rem;
-  }
-
-  /* Compact 2-column details grid */
-  #confirmationModal .confirm-details {
-    margin: 0 0 9px;
-    border-radius: 9px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1px;
-    background: rgba(255, 255, 255, 0.08);
-    overflow: hidden;
-  }
-
-  #confirmationModal .confirm-details > div {
-    padding: 6px 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 1px;
-    background: #11141a;
-  }
-
-  #confirmationModal .confirm-details dt {
-    font-size: 0.65rem;
-    color: rgba(255, 255, 255, 0.45);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin: 0;
-  }
-
-  #confirmationModal .confirm-details dd {
-    font-size: 0.81rem;
-    font-weight: 600;
-    text-align: left;
-    color: #fff;
-    margin: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-  }
-
-  #confirmationModal #modalMoveInTotal {
-    color: var(--primary-light, #ff8533);
-    font-weight: 700;
-  }
-
-  /* Compact Actions */
-  #confirmationModal .cstep-actions {
-    gap: 7px;
-    margin-top: 8px;
-  }
-
-  #confirmationModal .cstep-next {
-    padding: 10px 14px;
-    font-size: 0.85rem;
-    border-radius: 10px;
-    min-height: 40px;
-  }
-
-  #confirmationModal .confirm-wa {
-    padding: 9px 14px;
-    font-size: 0.83rem;
-    border-radius: 10px;
-    min-height: 38px;
-  }
-
-  #confirmationModal .confirm-done {
-    padding: 9px 14px;
-    font-size: 0.83rem;
-    border-radius: 10px;
-    min-height: 38px;
-  }
-
-  /* Step 2 (UPI Payment) on mobile */
-  #confirmationModal .cstep[data-step="2"] .confirm-head {
-    padding-top: 6px;
-  }
-
-  #confirmationModal .cstep[data-step="2"] #upiQr {
-    width: 130px !important;
-    height: 130px !important;
-  }
-
-  #confirmationModal .upi-vpa {
-    padding: 5px 10px;
-    margin-top: 6px;
-    font-size: 0.78rem;
-  }
-
-  #confirmationModal .upi-open {
-    padding: 8px 12px;
-    font-size: 0.82rem;
-    margin-top: 6px;
-    border-radius: 8px;
-  }
-
-  #confirmationModal .cstep-skip {
-    padding: 5px;
-    font-size: 0.78rem;
-  }
-
-  /* Step 3 (Confirm UTR) on mobile */
-  #confirmationModal .cstep[data-step="3"] .confirm-head {
-    padding-top: 6px;
-  }
-
-  #confirmationModal .upi-utr {
-    margin-top: 8px;
-  }
-
-  #confirmationModal .upi-utr-row {
-    gap: 8px;
-  }
-
-  #confirmationModal .upi-utr input {
-    padding: 9px 12px;
-    font-size: 0.88rem;
-  }
-
-  #confirmationModal .upi-submit {
-    padding: 9px 14px;
-    font-size: 0.82rem;
-  }
-
-  #confirmationModal .upi-note {
-    font-size: 0.73rem;
-    margin: 6px 0 8px;
-    line-height: 1.35;
-  }
-
-  #confirmationModal .cstep-invoice-action {
-    margin: 8px 0 6px;
-  }
-
-  #confirmationModal .confirm-download-invoice {
-    padding: 9px 14px;
-    font-size: 0.83rem;
-    border-radius: 10px;
-  }
 }
 
 /* ===================================================================
@@ -8073,6 +7843,267 @@ select.rsv-input,
 
 @media (prefers-reduced-motion: reduce) {
   #confirmationModal .cstep { transition: none; }
+}
+
+/* ===================================================================
+   CONFIRMATION MODAL — COMPACT MOBILE LAYOUT (FIT WITHOUT SCROLLING)
+   -------------------------------------------------------------------
+   On mobile devices (<= 600px), all 3 steps of the confirmation/payment
+   flow fit completely within the viewport without vertical scrolling.
+   The stepper indicator bar is sticky at the top, elements have tight
+   paddings, the QR code is optimally scaled (108px), and Total Move-in
+   text has high-contrast vibrant gold/orange coloring (#ff8533).
+   =================================================================== */
+@media (max-width: 600px) {
+  .booking-modal.confirm-modal {
+    padding: 8px 6px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #confirmationModal .confirm-dialog {
+    max-width: 380px;
+    width: 100%;
+    border-radius: 16px;
+    max-height: calc(100dvh - 16px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #confirmationModal .confirm-close {
+    top: 6px;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    font-size: 13px;
+    z-index: 20;
+  }
+
+  /* Fixed sticky 3-step progress indicator at top of dialog */
+  #confirmationModal .cstep-bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #15181e;
+    padding: 10px 14px 4px !important;
+    gap: 2px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  #confirmationModal .cstep-dot {
+    gap: 3px;
+    font-size: 0.62rem;
+  }
+
+  #confirmationModal .cstep-dot span {
+    width: 22px;
+    height: 22px;
+    font-size: 0.68rem;
+  }
+
+  #confirmationModal .cstep-dot::after {
+    top: 11px;
+    left: calc(50% + 14px);
+    right: calc(-50% + 14px);
+  }
+
+  /* Compact header across steps */
+  #confirmationModal .confirm-head {
+    padding: 6px 14px 3px !important;
+  }
+
+  #confirmationModal .confirm-check {
+    width: 36px;
+    height: 36px;
+  }
+
+  #confirmationModal .confirm-head h3 {
+    margin: 4px 0 2px;
+    font-size: 1.1rem;
+  }
+
+  #confirmationModal .confirm-sub {
+    font-size: 0.73rem;
+    line-height: 1.35;
+    margin: 0 0 4px;
+  }
+
+  #confirmationModal .confirm-body {
+    padding: 0 12px 10px;
+  }
+
+  /* Step 1: Reference banner */
+  #confirmationModal .confirm-ref {
+    padding: 6px 10px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #confirmationModal .confirm-ref-label {
+    font-size: 0.64rem;
+    letter-spacing: 0.08em;
+  }
+
+  #confirmationModal .confirm-ref-code {
+    font-size: 0.9rem;
+  }
+
+  /* Step 1: Compact 2-column details grid */
+  #confirmationModal .confirm-details {
+    margin: 0 0 8px;
+    border-radius: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+  }
+
+  #confirmationModal .confirm-details > div {
+    padding: 5px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1px;
+    background: #11141a;
+  }
+
+  #confirmationModal .confirm-details dt {
+    font-size: 0.62rem;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0;
+  }
+
+  #confirmationModal .confirm-details dd {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: left;
+    color: #fff;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  /* TOTAL MOVE-IN HIGHLIGHT: Crisp vibrant color & glow */
+  #confirmationModal #modalMoveInTotal {
+    color: #ff8533 !important;
+    font-weight: 700 !important;
+    text-shadow: 0 0 8px rgba(255, 133, 51, 0.4);
+  }
+
+  /* Compact Actions across steps */
+  #confirmationModal .cstep-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px !important;
+    margin-top: 6px !important;
+  }
+
+  #confirmationModal .cstep-next {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    border-radius: 9px;
+    min-height: 38px;
+  }
+
+  #confirmationModal .confirm-wa {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    border-radius: 9px;
+    min-height: 36px;
+  }
+
+  #confirmationModal .confirm-done {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    border-radius: 9px;
+    min-height: 36px;
+  }
+
+  /* Step 2 (UPI Payment) on mobile — tightly balanced to eliminate scroll */
+  #confirmationModal .cstep[data-step="2"] .confirm-head {
+    padding-top: 4px !important;
+    padding-bottom: 2px !important;
+  }
+
+  #confirmationModal .cstep[data-step="2"] .upi-qr-wrap {
+    margin: 0;
+  }
+
+  #confirmationModal .cstep[data-step="2"] #upiQr {
+    width: 108px !important;
+    height: 108px !important;
+  }
+
+  #confirmationModal .upi-vpa {
+    padding: 4px 8px;
+    margin-top: 4px;
+    font-size: 0.78rem;
+  }
+
+  #confirmationModal .upi-open {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    margin-top: 4px;
+    border-radius: 8px;
+  }
+
+  #confirmationModal .cstep-skip {
+    padding: 3px;
+    font-size: 0.75rem;
+    margin-top: 1px;
+  }
+
+  /* Step 3 (Confirm UTR) on mobile */
+  #confirmationModal .cstep[data-step="3"] .confirm-head {
+    padding-top: 4px !important;
+    padding-bottom: 2px !important;
+  }
+
+  #confirmationModal .upi-utr {
+    margin-top: 5px;
+  }
+
+  #confirmationModal .upi-utr-row {
+    gap: 6px;
+  }
+
+  #confirmationModal .upi-utr input {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+
+  #confirmationModal .upi-submit {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+  }
+
+  #confirmationModal .upi-note {
+    font-size: 0.72rem;
+    margin: 4px 0 5px;
+    line-height: 1.35;
+  }
+
+  #confirmationModal .cstep-invoice-action {
+    margin: 5px 0 4px;
+  }
+
+  #confirmationModal .confirm-download-invoice {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    border-radius: 9px;
+  }
 }
 
 /* Enquiry filters in the manager portal */
