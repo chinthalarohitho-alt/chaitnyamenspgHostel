@@ -7495,32 +7495,43 @@ select.rsv-input,
 
 #confirmationModal .upi-qr-wrap {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  margin: 6px auto 10px;
 }
 
 #confirmationModal #upiQr {
-  width: 128px;
-  height: 128px;
-  border-radius: 10px;
+  width: 140px;
+  height: 140px;
+  border-radius: 12px;
   background: #fff;
-  padding: 7px;
+  padding: 8px;
   flex-shrink: 0;
+  display: block;
+  margin: 0 auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 #confirmationModal .upi-vpa {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.5);
+  justify-content: center;
+  gap: 9px;
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  padding: 6px 14px;
 }
 
 #confirmationModal .upi-vpa code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.86rem;
+  font-size: 0.88rem;
+  font-weight: 600;
   color: #fff;
   word-break: break-all;
 }
@@ -7790,8 +7801,18 @@ select.rsv-input,
   border: none;
 }
 
-#confirmationModal .cstep[data-step="2"] .upi-qr-wrap { justify-content: center; }
-#confirmationModal .cstep[data-step="2"] #upiQr { width: 176px; height: 176px; }
+#confirmationModal .cstep[data-step="2"] .upi-qr-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+#confirmationModal .cstep[data-step="2"] #upiQr {
+  width: 140px;
+  height: 140px;
+  display: block;
+  margin: 0 auto;
+}
 
 
 
@@ -8031,25 +8052,40 @@ select.rsv-input,
     min-height: 36px;
   }
 
-  /* Step 2 (UPI Payment) on mobile — tightly balanced to eliminate scroll */
+  /* Step 2 (UPI Payment) on mobile — centered QR code with UPI ID directly below */
   #confirmationModal .cstep[data-step="2"] .confirm-head {
     padding-top: 4px !important;
     padding-bottom: 2px !important;
   }
 
   #confirmationModal .cstep[data-step="2"] .upi-qr-wrap {
-    margin: 0;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    margin: 4px auto 6px !important;
+    text-align: center !important;
   }
 
   #confirmationModal .cstep[data-step="2"] #upiQr {
-    width: 108px !important;
-    height: 108px !important;
+    width: 120px !important;
+    height: 120px !important;
+    display: block !important;
+    margin: 0 auto !important;
   }
 
   #confirmationModal .upi-vpa {
-    padding: 4px 8px;
-    margin-top: 4px;
-    font-size: 0.78rem;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 5px 12px !important;
+    margin: 0 auto !important;
+    font-size: 0.8rem !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 8px !important;
   }
 
   #confirmationModal .upi-open {
