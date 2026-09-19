@@ -395,6 +395,28 @@ ul {
   gap: 12px;
   flex-shrink: 0;
   text-decoration: none;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.brand-logo-img {
+  height: 48px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), filter 0.25s ease;
+}
+
+.brand-logo:hover .brand-logo-img {
+  transform: scale(1.04);
+  filter: drop-shadow(0 4px 14px rgba(202, 78, 0, 0.35));
+}
+
+.footer-brand-img {
+  height: 56px;
+  max-width: 160px;
+  margin-bottom: 6px;
 }
 
 .brand-icon {
@@ -6650,11 +6672,20 @@ select.rsv-input,
     height: 38px;
     flex-shrink: 0;
   }
+
+  .brand-logo-img {
+    height: 38px;
+    max-width: 110px;
+  }
 }
 
 @media (max-width: 400px) {
   .brand-name { font-size: 0.95rem; }
   .brand-tagline { font-size: 0.56rem; letter-spacing: 0.4px; }
+  .brand-logo-img {
+    height: 34px;
+    max-width: 95px;
+  }
 }
 
 /* ===================================================================
