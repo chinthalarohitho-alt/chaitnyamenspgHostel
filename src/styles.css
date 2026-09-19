@@ -414,9 +414,9 @@ ul {
 }
 
 .footer-brand-img {
-  height: 118px;
-  max-width: 350px;
-  margin-bottom: 16px;
+  height: 74px;
+  max-width: 240px;
+  margin-bottom: 14px;
 }
 
 .brand-icon {
@@ -6677,6 +6677,12 @@ select.rsv-input,
     height: 58px;
     max-width: 185px;
   }
+
+  .footer-brand-img {
+    height: 64px;
+    max-width: 200px;
+    margin-bottom: 12px;
+  }
 }
 
 @media (max-width: 400px) {
@@ -6685,6 +6691,10 @@ select.rsv-input,
   .brand-logo-img {
     height: 50px;
     max-width: 160px;
+  }
+  .footer-brand-img {
+    height: 56px;
+    max-width: 175px;
   }
 }
 
