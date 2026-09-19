@@ -16,17 +16,8 @@
    Verify in the portal. The UI says so plainly rather than implying
    the bed is secured.
    =================================================================== */
+import QRCode from 'qrcode';
 import { supabase, supabaseReady } from './supabase-client.js';
-
-let qrPromise = null;
-function getQR() {
-  if (!qrPromise) {
-    qrPromise = import('qrcode')
-      .then(m => m.default || m)
-      .catch(() => { qrPromise = null; return null; });
-  }
-  return qrPromise;
-}
 
 /** Build the UPI intent URI that every Indian payment app understands. */
 export function buildUpiUri({ vpa, payeeName, amount, ref, note }) {
@@ -42,17 +33,25 @@ export function buildUpiUri({ vpa, payeeName, amount, ref, note }) {
 
 /** Render the URI as a QR into a <canvas>. Returns false if it couldn't. */
 export async function renderQr(canvas, uri) {
-  const QR = await getQR();
-  if (!QR || !canvas) return false;
+  if (!canvas || !uri) return false;
   try {
-    await QR.toCanvas(canvas, uri, {
-      width: 208,
-      margin: 1,
-      color: { dark: '#11141a', light: '#ffffff' },
-      errorCorrectionLevel: 'M',
-    });
-    return true;
-  } catch {
+    const fn = (typeof QRCode?.toCanvas === 'function')
+      ? QRCode.toCanvas
+      : (typeof QRCode?.default?.toCanvas === 'function' ? QRCode.default.toCanvas : null);
+
+    if (fn) {
+      await fn(canvas, uri, {
+        width: 208,
+        margin: 1,
+        color: { dark: '#11141a', light: '#ffffff' },
+        errorCorrectionLevel: 'M',
+      });
+      return true;
+    }
+    console.error('[renderQr] QRCode.toCanvas not available:', QRCode);
+    return false;
+  } catch (err) {
+    console.error('[renderQr] failed to render QR to canvas:', err);
     return false;
   }
 }

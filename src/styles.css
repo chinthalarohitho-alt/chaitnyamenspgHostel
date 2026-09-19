@@ -7840,9 +7840,7 @@ select.rsv-input,
    ------------------------------------------------------------------- */
 #confirmationModal .cstep-stack {
   display: grid;
-  /* Shorter steps sit centred in the fixed-height stack, so the spare
-     room reads as breathing space rather than a void under the buttons. */
-  align-items: center;
+  align-items: start;
 }
 
 #confirmationModal .cstep,

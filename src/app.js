@@ -85,6 +85,7 @@ let confirmSteps = 3;
    cannot be reopened, and only while there is still something to lose. */
 let currentConfirmStep = 1;
 let tokenStepSettled = false;
+let activeUpiUri = '';
 
 function gotoConfirmStep(n) {
   const dialog = document.querySelector('#confirmationModal .confirm-dialog');
@@ -99,6 +100,10 @@ function gotoConfirmStep(n) {
     dot.classList.toggle('is-done', d < n);
   });
   dialog.scrollTop = 0;
+  if (n === 2 && activeUpiUri) {
+    const qrCanvas = document.getElementById('upiQr');
+    if (qrCanvas) renderQr(qrCanvas, activeUpiUri);
+  }
 }
 
 /** Prepare the token steps, or hide them when no UPI id is set. */
@@ -159,6 +164,7 @@ function showUpiToken(ref) {
   const openEl = document.getElementById('upiOpen');
   if (openEl) openEl.href = uri;
 
+  activeUpiUri = uri;
   renderQr(document.getElementById('upiQr'), uri);
 
   const input = document.getElementById('upiUtrInput');
