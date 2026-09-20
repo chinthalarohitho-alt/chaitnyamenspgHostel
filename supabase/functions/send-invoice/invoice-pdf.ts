@@ -112,7 +112,7 @@ export async function buildInvoicePdf(
   y -= 26;
 
   // ---------- billed to ----------
-  text("BILLED TO", M, y, 8.5, bold, GOLD);
+  text("BILLED TO", M, y, 8.5, bold, NAVY);
   y -= 17;
   text(b.name, M, y, 11.5, bold, CHARCOAL);
   y -= 15;

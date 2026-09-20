@@ -192,8 +192,8 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   // 3. TWO-COLUMN: BILLED TO vs HOSTEL CONTACT
   const midX = M + (A4.w - M * 2) * 0.50;
 
-  text('BILLED TO (RESIDENT)', M, curY, 8.5, bold, GOLD);
-  text('HOSTEL DETAILS', midX, curY, 8.5, bold, GOLD);
+  text('BILLED TO (RESIDENT)', M, curY, 8.5, bold, NAVY);
+  text('HOSTEL DETAILS', midX, curY, 8.5, bold, NAVY);
   curY -= 8;
   rule(curY, M, midX - 16, BORDER, 0.6);
   rule(curY, midX, A4.w - M, BORDER, 0.6);
