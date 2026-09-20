@@ -10,6 +10,7 @@
  */
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 import type { Booking, Hostel } from "./template.ts";
+import { getLogoPngBytes } from "./logo-data.ts";
 
 const ORANGE = rgb(0.792, 0.306, 0.0);   // #ca4e00
 const INK    = rgb(0.106, 0.114, 0.129);
@@ -58,13 +59,39 @@ export async function buildInvoicePdf(
     page.drawLine({ start: { x: x1, y }, end: { x: x2, y }, thickness: 0.7, color: LINE });
 
   // ---------- header band ----------
-  page.drawRectangle({ x: 0, y: A4.h - 104, width: A4.w, height: 104, color: ORANGE });
-  text(h.name, M, A4.h - 56, 17, bold, rgb(1, 1, 1));
-  text("Mens PG & Hostel  ·  Hanamkonda", M, A4.h - 76, 9.5, reg, rgb(1, 0.91, 0.86));
-  textR("INVOICE", A4.w - M, A4.h - 56, 17, bold, rgb(1, 1, 1));
-  textR(b.ref, A4.w - M, A4.h - 76, 10, reg, rgb(1, 0.91, 0.86));
+  const headerH = 100;
+  page.drawRectangle({ x: 0, y: A4.h - headerH, width: A4.w, height: headerH, color: rgb(0.067, 0.075, 0.094) });
+  page.drawRectangle({ x: 0, y: A4.h - headerH, width: A4.w, height: 3, color: ORANGE });
 
-  let y = A4.h - 104 - 46;
+  let logoImage = null;
+  try {
+    const logoBytes = getLogoPngBytes();
+    if (logoBytes && logoBytes.length > 0) {
+      logoImage = await doc.embedPng(logoBytes);
+    }
+  } catch (err) {
+    console.warn("Logo embed failed:", err);
+  }
+
+  if (logoImage) {
+    const logoH = 58;
+    const logoW = Math.round(logoH * (922 / 380));
+    const logoY = A4.h - headerH + Math.round((headerH - logoH) / 2) + 1;
+    page.drawImage(logoImage, { x: M, y: logoY, width: logoW, height: logoH });
+    text("Executive Living & Student PG", M + logoW + 16, A4.h - 44, 9.5, bold, rgb(0.95, 0.96, 0.98));
+    text("Naimnagar, Hanamkonda · Telangana", M + logoW + 16, A4.h - 59, 8.5, reg, rgb(0.72, 0.75, 0.80));
+    text("STAY  |  STUDY  |  GROW", M + logoW + 16, A4.h - 73, 8, bold, rgb(0.98, 0.55, 0.20));
+  } else {
+    text(h.name, M, A4.h - 52, 17, bold, rgb(1, 1, 1));
+    text("Mens PG & Hostel  ·  Hanamkonda", M, A4.h - 72, 9.5, reg, rgb(1, 0.91, 0.86));
+  }
+
+  textR("INVOICE", A4.w - M, A4.h - 44, 16, bold, rgb(1, 1, 1));
+  textR(b.ref, A4.w - M, A4.h - 60, 11, bold, rgb(0.98, 0.65, 0.3));
+  const statusBadge = opts.paid ? "TOKEN RECEIVED" : "AWAITING TOKEN";
+  textR(statusBadge, A4.w - M, A4.h - 74, 8, bold, opts.paid ? rgb(0.35, 0.85, 0.45) : rgb(1, 0.75, 0.3));
+
+  let y = A4.h - headerH - 36;
 
   // ---------- meta ----------
   const issued = new Date(b.created_at ?? Date.now()).toLocaleDateString("en-IN", {

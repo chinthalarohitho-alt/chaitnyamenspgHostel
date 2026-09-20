@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { getLogoPngBytes } from './logo-data.js';
 
 const ORANGE   = rgb(0.792, 0.306, 0.0);   // #ca4e00
 const DARK     = rgb(0.067, 0.075, 0.094); // #111318
@@ -69,31 +70,53 @@ export async function buildInvoicePdfDoc(b, h = {}) {
     page.drawLine({ start: { x: x1, y }, end: { x: x2, y }, thickness, color });
   };
 
-  // 1. TOP HEADER BRAND BANNER (92pt tall)
-  const headerH = 92;
+  // 1. TOP HEADER BRAND BANNER WITH OFFICIAL LOGO
+  const headerH = 96;
   page.drawRectangle({
     x: 0,
     y: A4.h - headerH,
     width: A4.w,
     height: headerH,
-    color: ORANGE,
+    color: DARK,
   });
+  // Orange brand accent bar
+  page.drawRectangle({
+    x: 0,
+    y: A4.h - headerH,
+    width: A4.w,
+    height: 3,
+    color: rgb(0.976, 0.451, 0.086), // #f97316
+  });
+
+  let logoImage = null;
+  try {
+    const logoBytes = getLogoPngBytes();
+    if (logoBytes && logoBytes.length > 0) {
+      logoImage = await doc.embedPng(logoBytes);
+    }
+  } catch (err) {
+    console.warn('[invoice-pdf] Logo embed failed, falling back to text:', err);
+  }
 
   const hostelName = h.name || 'Chaitanya Mens PG & Hostel';
-  text(hostelName, M, A4.h - 44, 18, bold, rgb(1, 1, 1));
-  text('Executive Living & Student PG - Naimnagar, Hanamkonda', M, A4.h - 64, 9.5, reg, rgb(1, 0.92, 0.86));
-  text('STAY | STUDY | GROW', M, A4.h - 78, 8, bold, rgb(1, 0.85, 0.75));
-
-  textR('OFFICIAL INVOICE', A4.w - M, A4.h - 44, 16, bold, rgb(1, 1, 1));
-  textR(b.ref || '#CMPG-BOOKING', A4.w - M, A4.h - 64, 11, bold, rgb(1, 0.92, 0.86));
-  textR('CONFIRMED RESERVATION', A4.w - M, A4.h - 78, 8, bold, rgb(1, 0.85, 0.75));
-
-  let curY = A4.h - headerH - 24;
-
-  // 2. METADATA SUMMARY BAR
-  const issueDate = b.dateIssued || new Date().toLocaleDateString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric'
-  });
+  if (logoImage) {
+    const logoH = 58;
+    const logoW = Math.round(logoH * (922 / 380)); // 141
+    const logoY = A4.h - headerH + Math.round((headerH - logoH) / 2) + 1;
+    page.drawImage(logoImage, {
+      x: M,
+      y: logoY,
+      width: logoW,
+      height: logoH,
+    });
+    text('Executive Living & Student PG', M + logoW + 16, A4.h - 44, 9.5, bold, rgb(0.95, 0.96, 0.98));
+    text('Naimnagar, Hanamkonda · Telangana', M + logoW + 16, A4.h - 59, 8.5, reg, rgb(0.72, 0.75, 0.80));
+    text('STAY  |  STUDY  |  GROW', M + logoW + 16, A4.h - 73, 8, bold, rgb(0.98, 0.55, 0.20));
+  } else {
+    text(hostelName, M, A4.h - 44, 18, bold, rgb(1, 1, 1));
+    text('Executive Living & Student PG - Naimnagar, Hanamkonda', M, A4.h - 64, 9.5, reg, rgb(1, 0.92, 0.86));
+    text('STAY | STUDY | GROW', M, A4.h - 78, 8, bold, rgb(1, 0.85, 0.75));
+  }
 
   const isAccepted = b.status === 'accepted' ||
                      b.paymentStatus === 'paid' ||
@@ -102,6 +125,17 @@ export async function buildInvoicePdfDoc(b, h = {}) {
                      b.verified === true ||
                      !!b.paidAt ||
                      !!b.paid_at;
+
+  textR('OFFICIAL INVOICE', A4.w - M, A4.h - 42, 15, bold, rgb(1, 1, 1));
+  textR(b.ref || '#CMPG-BOOKING', A4.w - M, A4.h - 59, 11, bold, rgb(0.98, 0.65, 0.3));
+  textR(isAccepted ? 'VERIFIED & CONFIRMED' : 'RESERVATION ENQUIRY', A4.w - M, A4.h - 73, 8, bold, isAccepted ? rgb(0.35, 0.85, 0.45) : rgb(1, 0.75, 0.3));
+
+  let curY = A4.h - headerH - 24;
+
+  // 2. METADATA SUMMARY BAR
+  const issueDate = b.dateIssued || new Date().toLocaleDateString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric'
+  });
 
   const totalPayableVal = parseInt(String(b.payable_move_in || b.payableOnMoveIn || b.dueOnMoveIn || b.total || b.stayTotal || '13900').replace(/[^\d]/g, ''), 10) || 13900;
   const totalPayableStr = 'Rs. ' + totalPayableVal.toLocaleString('en-IN');
