@@ -261,7 +261,7 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   tableRows.push({
     label: isAccepted ? 'Total Move-In Paid via UPI' : 'Total Move-In Submitted via UPI',
     val: `- ${amountPaidStr}`,
-    highlight: DEEP_GREEN,
+    highlight: isAccepted ? DEEP_GREEN : CHARCOAL,
     note: isAccepted
       ? (rawUtr ? `UTR: ${rawUtr} (Verified & Approved)` : 'Verified & Approved')
       : (rawUtr ? `UTR: ${rawUtr} (Pending move-in validation)` : 'To be validated'),
@@ -269,9 +269,9 @@ export async function buildInvoicePdfDoc(b, h = {}) {
 
   tableRows.push({
     label: 'Remaining Balance Due on Move-In',
-    val: balanceDueStr,
+    val: balanceDueVal > 0 ? ('Rs. ' + balanceDueVal.toLocaleString('en-IN')) : (isAccepted ? 'Rs. 0 — Fully Paid' : 'Rs. 0 (Pending Validation)'),
     isTotal: true,
-    sub: balanceDueVal > 0 ? 'Payable on check-in / room handover' : 'All move-in charges fully settled (Rent + Security Deposit)',
+    sub: balanceDueVal > 0 ? 'Payable on check-in / room handover' : (isAccepted ? 'All move-in charges fully settled (Rent + Security Deposit)' : 'All charges submitted — pending manager verification'),
   });
 
   for (const r of tableRows) {
@@ -292,7 +292,7 @@ export async function buildInvoicePdfDoc(b, h = {}) {
 
       text(r.label, M + 12, curY + 2, 10.5, bold, NAVY);
       if (r.sub) text(r.sub, M + 12, curY - 9, 7.5, reg, SLATE);
-      textR(r.val, A4.w - M - 12, curY - 2, 12, bold, balanceDueVal === 0 ? DEEP_GREEN : NAVY);
+      textR(r.val, A4.w - M - 12, curY - 2, 12, bold, (balanceDueVal === 0 && isAccepted) ? DEEP_GREEN : NAVY);
 
       curY -= 26;
     } else {
@@ -326,14 +326,14 @@ export async function buildInvoicePdfDoc(b, h = {}) {
     const utrDisplay = rawUtr ? `Verified Bank UTR: ${rawUtr}` : 'Verified by Hostel Management';
     text(utrDisplay, M + 16, curY - 44, 9.5, bold, CHARCOAL);
     textR(amountPaidStr, A4.w - M - 18, curY - 20, 18, bold, NAVY);
-    textR('Full Payment (Paid)', A4.w - M - 18, curY - 40, 8.5, bold, DEEP_GREEN);
+    textR(`${amountPaidStr} — FULL PAYMENT`, A4.w - M - 18, curY - 40, 8.5, bold, DEEP_GREEN);
   } else {
     text('TOTAL MOVE-IN PAYMENT SUBMITTED — PENDING VALIDATION', M + 16, curY - 12, 8.5, bold, AMBER);
     text('Note: Total move-in payment (Rent + Deposit) will be verified by the manager before move-in.', M + 16, curY - 26, 8, obliq, SLATE);
     const utrDisplay = rawUtr ? `UPI Ref (UTR): ${rawUtr}` : 'UPI Ref (UTR): Pending Submission';
     text(utrDisplay, M + 16, curY - 44, 9.5, bold, CHARCOAL);
     textR(amountPaidStr, A4.w - M - 18, curY - 20, 18, bold, NAVY);
-    textR('Full Payment (Submitted)', A4.w - M - 18, curY - 40, 8.5, bold, AMBER);
+    textR('Pending Move-In Validation', A4.w - M - 18, curY - 40, 8.5, bold, AMBER);
   }
 
   curY -= 80;
