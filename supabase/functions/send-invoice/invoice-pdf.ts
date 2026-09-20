@@ -187,7 +187,7 @@ export async function buildInvoicePdf(
     fy -= 11;
   }
   text(`Phone: ${h.phone}`, M, fy - 2, 8.5, reg, SLATE);
-  textR("Computer generated — no signature required.", A4.w - M, M + 12, 8, reg, SLATE);
+  textR("Computer generated — no signature required.", A4.w - M, M + 48, 8, reg, SLATE);
 
   return await doc.save();
 }

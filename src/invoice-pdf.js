@@ -364,7 +364,7 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   rule(M + 36, M, A4.w - M, BORDER, 0.8);
   text(`${hostelName} - Official Booking Receipt`, M, M + 22, 8.5, bold, CHARCOAL);
   text('18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda | +91 99497 85344', M, M + 10, 7.5, reg, SLATE);
-  textR('Computer generated - valid without physical signature', A4.w - M, M + 16, 7.5, obliq, SLATE);
+  textR('Computer generated - valid without physical signature', A4.w - M, M + 22, 7.5, obliq, SLATE);
 
   return await doc.save();
 }
