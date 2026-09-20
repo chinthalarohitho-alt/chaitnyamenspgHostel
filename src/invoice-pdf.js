@@ -237,7 +237,8 @@ export async function buildInvoicePdfDoc(b, h = {}) {
     { label: 'Monthly Subtotal (Rent)', val: formatRs(b.monthly_rent || b.monthly || '8500') + ' / mo' },
   ];
 
-  if (b.term_savings && b.term_savings !== '- Rs. 0' && b.term_savings !== '0') {
+  const termSavingsVal = parseInt(String(b.term_savings || '').replace(/[^\d]/g, ''), 10) || 0;
+  if (termSavingsVal > 0) {
     tableRows.push({
       label: 'Long-term Savings / Discount',
       val: cleanStr(b.term_savings),
