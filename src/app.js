@@ -3913,6 +3913,8 @@ function initBookingForm() {
 
   // ── Government ID Proof Handling ──
   const guestIdType = document.getElementById('guestIdType');
+  const guestIdNumber = document.getElementById('guestIdNumber');
+  const idNumberError = document.getElementById('idNumberError');
   const guestIdFile = document.getElementById('guestIdFile');
   const idUploadDropzone = document.getElementById('idUploadDropzone');
   const idUploadPrompt = document.getElementById('idUploadPrompt');
@@ -3926,6 +3928,104 @@ function initBookingForm() {
   const idFileError = document.getElementById('idFileError');
 
   let currentIdProof = null; // { dataUrl: string, name: string, sizeStr: string, isPdf: boolean, verified: boolean }
+
+  const updateIdPlaceholder = () => {
+    if (!guestIdType || !guestIdNumber) return;
+    const type = guestIdType.value;
+    if (type === 'Aadhaar Card') {
+      guestIdNumber.placeholder = 'Enter 12-digit Aadhaar number';
+      guestIdNumber.setAttribute('maxlength', '14'); // allows "XXXX XXXX XXXX"
+    } else if (type === 'PAN Card') {
+      guestIdNumber.placeholder = 'Enter 10-character PAN (e.g. ABCDE1234F)';
+      guestIdNumber.setAttribute('maxlength', '10');
+    } else if (type === 'Driving License') {
+      guestIdNumber.placeholder = 'Enter Driving License number';
+      guestIdNumber.removeAttribute('maxlength');
+    } else if (type === 'Voter ID') {
+      guestIdNumber.placeholder = 'Enter Voter ID (EPIC) number';
+      guestIdNumber.removeAttribute('maxlength');
+    } else if (type === 'Passport') {
+      guestIdNumber.placeholder = 'Enter Passport number (e.g. A1234567)';
+      guestIdNumber.setAttribute('maxlength', '8');
+    }
+    guestIdNumber.classList.remove('is-invalid');
+    if (idNumberError) idNumberError.style.display = 'none';
+  };
+
+  if (guestIdType) {
+    guestIdType.addEventListener('change', updateIdPlaceholder);
+  }
+
+  if (guestIdNumber) {
+    guestIdNumber.addEventListener('input', () => {
+      const type = guestIdType ? guestIdType.value : 'Aadhaar Card';
+      if (type === 'Aadhaar Card') {
+        const rawDigits = guestIdNumber.value.replace(/\D/g, '').slice(0, 12);
+        const formatted = rawDigits.match(/.{1,4}/g)?.join(' ') || rawDigits;
+        guestIdNumber.value = formatted;
+      } else if (type === 'PAN Card') {
+        guestIdNumber.value = guestIdNumber.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+      } else if (type === 'Passport') {
+        guestIdNumber.value = guestIdNumber.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+      }
+      if (guestIdNumber.value.trim().length > 0) {
+        guestIdNumber.classList.remove('is-invalid');
+        if (idNumberError) idNumberError.style.display = 'none';
+      }
+    });
+  }
+
+  function validateIdNumber(type, val) {
+    const raw = (val || '').trim();
+    if (!raw) {
+      return { ok: false, error: `Please enter your ${type} number.` };
+    }
+    if (type === 'Aadhaar Card') {
+      const digits = raw.replace(/\D/g, '');
+      if (digits.length !== 12) {
+        return { ok: false, error: 'Aadhaar number must be exactly 12 digits.' };
+      }
+      if (/^([0-9])\1{11}$/.test(digits) || digits === '123456789012') {
+        return { ok: false, error: 'Please enter a valid, authentic Aadhaar number.' };
+      }
+      if (digits[0] === '0' || digits[0] === '1') {
+        return { ok: false, error: 'Aadhaar number cannot start with 0 or 1.' };
+      }
+      return { ok: true, value: digits, formatted: digits.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3') };
+    }
+    if (type === 'PAN Card') {
+      const clean = raw.toUpperCase().replace(/\s+/g, '');
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(clean)) {
+        return { ok: false, error: 'Invalid PAN format. Must be 5 letters, 4 numbers, 1 letter (e.g. ABCDE1234F).' };
+      }
+      return { ok: true, value: clean, formatted: clean };
+    }
+    if (type === 'Passport') {
+      const clean = raw.toUpperCase().replace(/\s+/g, '');
+      if (!/^[A-Z][0-9]{7}$/.test(clean)) {
+        return { ok: false, error: 'Passport must be 1 letter followed by 7 digits (e.g. A1234567).' };
+      }
+      return { ok: true, value: clean, formatted: clean };
+    }
+    if (type === 'Voter ID') {
+      const clean = raw.toUpperCase().replace(/\s+/g, '');
+      if (clean.length < 10) {
+        return { ok: false, error: 'Voter ID (EPIC) must have at least 10 characters.' };
+      }
+      return { ok: true, value: clean, formatted: clean };
+    }
+    if (type === 'Driving License') {
+      const clean = raw.toUpperCase().replace(/\s+/g, '');
+      if (clean.length < 10) {
+        return { ok: false, error: 'Driving License must have at least 10 characters.' };
+      }
+      return { ok: true, value: clean, formatted: clean };
+    }
+    if (raw.length < 4) {
+      return { ok: false, error: 'Please enter a valid government ID number.' };
+    }
+    return { ok: true, value: raw, formatted: raw };
+  }
 
   function compressImageToDataUrl(file, maxWidth = 1200, quality = 0.75) {
     return new Promise((resolve, reject) => {
@@ -4134,6 +4234,7 @@ function initBookingForm() {
       currentIdProof = null;
       if (guestIdFile) guestIdFile.value = '';
       if (idFilePreview) idFilePreview.style.display = 'none';
+      if (idVerifiedPill) idVerifiedPill.style.display = 'none';
       if (idUploadPrompt) idUploadPrompt.style.display = 'flex';
       if (idPreviewImg) {
         idPreviewImg.src = '';
@@ -4226,7 +4327,22 @@ function initBookingForm() {
       }
     }
 
-    // 4. Government ID proof document check
+    // 4. Government ID Number check
+    const idTypeVal = guestIdType ? guestIdType.value : 'Aadhaar Card';
+    const idCheck = validateIdNumber(idTypeVal, guestIdNumber?.value);
+    if (!idCheck.ok) {
+      if (guestIdNumber) guestIdNumber.classList.add('is-invalid');
+      if (idNumberError) {
+        idNumberError.textContent = idCheck.error;
+        idNumberError.style.display = 'flex';
+      }
+      isValid = false;
+    } else {
+      if (guestIdNumber) guestIdNumber.classList.remove('is-invalid');
+      if (idNumberError) idNumberError.style.display = 'none';
+    }
+
+    // 5. Government ID proof document check
     if (!currentIdProof || !currentIdProof.dataUrl) {
       if (idUploadDropzone) idUploadDropzone.classList.add('is-invalid');
       if (idFileError) {
@@ -4293,7 +4409,8 @@ function initBookingForm() {
       duration: sel.duration,
       workplace: workplace ? workplace.value.trim() : '',
       email: cleanEmail.toLowerCase(),
-      id_type: guestIdType ? guestIdType.value : 'Aadhaar Card',
+      id_type: idTypeVal,
+      id_number: idCheck.value || guestIdNumber?.value?.trim() || '',
       id_proof_url: currentIdProof?.dataUrl || '',
       monthly_rent: monthlyTotalStr,
       term_savings: document.getElementById('dispDiscountVal')?.textContent || '',
@@ -4343,7 +4460,12 @@ function initBookingForm() {
     if (modalClimate) modalClimate.textContent = sel.climate;
     if (modalDate) modalDate.textContent = moveInDateDisplay ? moveInDateDisplay.value : moveInDate.value;
     const modalIdProof = document.getElementById('modalIdProof');
-    if (modalIdProof) modalIdProof.textContent = `${newBooking.id_type} (Verified Document)`;
+    if (modalIdProof) {
+      const displayNum = idTypeVal === 'Aadhaar Card' && newBooking.id_number.length === 12
+        ? `•••• •••• ${newBooking.id_number.slice(-4)}`
+        : newBooking.id_number;
+      modalIdProof.textContent = `${newBooking.id_type} (${displayNum}) • Attached`;
+    }
     const modalMoveInTotal = document.getElementById('modalMoveInTotal');
     if (modalMoveInTotal) modalMoveInTotal.textContent = moveInTotalStr;
 
@@ -4353,7 +4475,7 @@ function initBookingForm() {
       `📋 Ref Code: ${refId}\n` +
       `👤 Name: ${fullName.value.trim()}\n` +
       `📞 Phone: ${cleanPhone}\n` +
-      `🪪 Govt ID: ${newBooking.id_type} (Document Uploaded)\n` +
+      `🪪 Govt ID: ${newBooking.id_type} (${newBooking.id_number}) [Doc Attached]\n` +
       `🛏️ Room: ${sel.roomName} (${sel.climate})\n` +
       `🏢 Preferred Floor: ${chosenFloor}\n` +
       `📅 Move-in Date: ${moveInDateDisplay ? moveInDateDisplay.value : moveInDate.value}\n` +

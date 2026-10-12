@@ -929,13 +929,13 @@
                     </div>
                   </div>
 
-                  <!-- Government ID Type (Full Width) -->
-                  <div class="rsv-field rsv-field-full">
+                  <!-- Government ID Type -->
+                  <div class="rsv-field">
                     <label for="guestIdType" class="rsv-label">Government ID Type <span class="req">*</span></label>
                     <div class="rsv-input-wrap">
                       <i class="fa-solid fa-id-card"></i>
                       <select id="guestIdType" name="guestIdType" class="rsv-input rsv-select" required>
-                        <option value="Aadhaar Card" selected>Aadhaar Card (Front Side)</option>
+                        <option value="Aadhaar Card" selected>Aadhaar Card</option>
                         <option value="PAN Card">PAN Card</option>
                         <option value="Driving License">Driving License</option>
                         <option value="Voter ID">Voter ID</option>
@@ -943,6 +943,17 @@
                       </select>
                       <span class="rsv-select-chevron"><i class="fa-solid fa-chevron-down"></i></span>
                     </div>
+                  </div>
+
+                  <!-- Government ID Number -->
+                  <div class="rsv-field">
+                    <label for="guestIdNumber" class="rsv-label">Government ID Number <span class="req">*</span></label>
+                    <div class="rsv-input-wrap">
+                      <i class="fa-solid fa-hashtag"></i>
+                      <input type="text" id="guestIdNumber" name="guestIdNumber" class="rsv-input"
+                             placeholder="Enter 12-digit Aadhaar number" required autocomplete="off" spellcheck="false">
+                    </div>
+                    <span class="field-error" id="idNumberError">Please enter a valid government ID number.</span>
                   </div>
 
                   <!-- Upload ID Proof Document (Full Width) -->
@@ -966,7 +977,7 @@
                           <span class="id-file-name" id="idFileName">document.jpg</span>
                           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                             <span class="id-file-size" id="idFileSize">1.2 MB</span>
-                            <span class="id-verified-pill" id="idVerifiedPill"><i class="fa-solid fa-circle-check"></i> Document Verified</span>
+                            <span class="id-verified-pill" id="idVerifiedPill"><i class="fa-solid fa-paperclip"></i> Document Attached</span>
                           </div>
                         </div>
                         <button type="button" class="id-file-remove-btn" id="removeIdFileBtn" title="Remove file">

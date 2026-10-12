@@ -2889,9 +2889,9 @@ select.rsv-input,
   gap: 4px;
   font-size: 0.72rem;
   font-weight: 600;
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.28);
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.28);
   padding: 1px 7px;
   border-radius: 4px;
   width: fit-content;
