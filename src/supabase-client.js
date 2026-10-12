@@ -116,7 +116,7 @@ export function updateLocalBooking(ref, patch) {
 export async function submitBooking(b) {
   saveLocalBooking(b);
   if (!supabase) return { ok: true };
-  const { error } = await supabase.from('bookings').insert({
+  const basePayload = {
     ref: b.ref,
     name: b.name,
     phone: b.phone,
@@ -130,10 +130,28 @@ export async function submitBooking(b) {
     payment_status: b.paymentStatus || 'unpaid',
     payment_amount: b.payment_amount || (b.payable_move_in ? parseInt(String(b.payable_move_in).replace(/[^\d]/g, ''), 10) : (b.security_deposit ? parseInt(String(b.security_deposit).replace(/[^\d]/g, ''), 10) : null)),
     upi_utr: b.upi_utr || b.utr || null
-  });
-  if (error) return { ok: false, error: error.message };
+  };
+
+  const fullPayload = {
+    ...basePayload,
+    id_type: b.id_type || null,
+    id_number: b.id_number || null,
+    id_proof_url: b.id_proof_url || null
+  };
+
+  const { error } = await supabase.from('bookings').insert(fullPayload);
+  if (error) {
+    // If the remote table has not yet run the migration for id columns, gracefully retry without them
+    if (error.message && (error.message.includes('id_type') || error.message.includes('id_proof') || error.message.includes('id_number'))) {
+      const fallback = await supabase.from('bookings').insert(basePayload);
+      if (fallback.error) return { ok: false, error: fallback.error.message };
+      return { ok: true };
+    }
+    return { ok: false, error: error.message };
+  }
   return { ok: true };
 }
+
 
 /**
  * Ask the server to send a booking email.
@@ -204,6 +222,9 @@ export async function fetchBookings() {
           date: r.move_in_date,
           duration: r.duration,
           workplace: r.workplace,
+          id_type: r.id_type,
+          id_number: r.id_number,
+          id_proof_url: r.id_proof_url,
           time: relativeTime(r.created_at),
           createdAt: r.created_at
         }));

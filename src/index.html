@@ -928,6 +928,62 @@
                       <input type="text" id="workplace" name="workplace" class="rsv-input" placeholder="Kakatiya University, TCS...">
                     </div>
                   </div>
+
+                  <!-- Government ID Type -->
+                  <div class="rsv-field">
+                    <label for="guestIdType" class="rsv-label">Government ID Type <span class="req">*</span></label>
+                    <div class="rsv-input-wrap">
+                      <i class="fa-solid fa-id-card"></i>
+                      <select id="guestIdType" name="guestIdType" class="rsv-input rsv-select" required>
+                        <option value="Aadhaar Card" selected>Aadhaar Card</option>
+                        <option value="PAN Card">PAN Card</option>
+                        <option value="Driving License">Driving License</option>
+                        <option value="Voter ID">Voter ID</option>
+                        <option value="Passport">Passport</option>
+                      </select>
+                      <span class="rsv-select-chevron"><i class="fa-solid fa-chevron-down"></i></span>
+                    </div>
+                  </div>
+
+                  <!-- Government ID Number -->
+                  <div class="rsv-field">
+                    <label for="guestIdNumber" class="rsv-label">Government ID Number <span class="req">*</span></label>
+                    <div class="rsv-input-wrap">
+                      <i class="fa-solid fa-hashtag"></i>
+                      <input type="text" id="guestIdNumber" name="guestIdNumber" class="rsv-input"
+                             placeholder="Enter 12-digit Aadhaar number" required autocomplete="off" spellcheck="false">
+                    </div>
+                    <span class="field-error" id="idNumberError">Please enter a valid government ID number.</span>
+                  </div>
+
+                  <!-- Upload ID Proof Document (Full Width) -->
+                  <div class="rsv-field rsv-field-full">
+                    <label for="guestIdFile" class="rsv-label">Upload Government ID Proof <span class="req">*</span> <span class="rsv-label-hint">(Front side photo or PDF)</span></label>
+                    <div class="id-upload-dropzone" id="idUploadDropzone">
+                      <input type="file" id="guestIdFile" name="guestIdFile" accept="image/*,.pdf" class="id-file-input" required>
+                      <div class="id-upload-content" id="idUploadPrompt">
+                        <i class="fa-solid fa-cloud-arrow-up id-upload-icon"></i>
+                        <div class="id-upload-texts">
+                          <span class="id-upload-title">Click to upload or drag &amp; drop document</span>
+                          <span class="id-upload-desc">Photo (JPG, PNG) or Document (PDF) &bull; Max 5MB</span>
+                        </div>
+                      </div>
+                      <div class="id-file-preview" id="idFilePreview" style="display: none;">
+                        <div class="id-preview-thumb-wrap">
+                          <img id="idPreviewImg" src="" alt="ID Preview" style="display: none;">
+                          <i class="fa-solid fa-file-pdf id-pdf-icon" id="idPreviewPdfIcon" style="display: none;"></i>
+                        </div>
+                        <div class="id-file-info">
+                          <span class="id-file-name" id="idFileName">document.jpg</span>
+                          <span class="id-file-size" id="idFileSize">1.2 MB</span>
+                        </div>
+                        <button type="button" class="id-file-remove-btn" id="removeIdFileBtn" title="Remove file">
+                          <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <span class="field-error" id="idFileError">Please upload a photo or PDF of your government ID.</span>
+                  </div>
                 </div>
               </div>
 
@@ -1336,6 +1392,7 @@
           <dl class="confirm-details">
             <div><dt>Name</dt><dd id="modalName">-</dd></div>
             <div><dt>Phone</dt><dd id="modalPhone">-</dd></div>
+            <div><dt>Govt ID</dt><dd id="modalIdProof">-</dd></div>
             <div><dt>Room</dt><dd id="modalRoom">-</dd></div>
             <div><dt>Climate</dt><dd id="modalClimate">-</dd></div>
             <div><dt>Move-in</dt><dd id="modalDate">-</dd></div>
@@ -1501,6 +1558,42 @@
           <a href="#calculator" class="btn btn-primary" id="mapBookNowBtn">
             <i class="fa-solid fa-calendar-check"></i> Book an Available Bed
           </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🪪 ID PROOF DOCUMENT PREVIEW MODAL -->
+  <div class="booking-modal" id="idProofModal" role="dialog" aria-modal="true" aria-hidden="true" tabindex="-1">
+    <div class="modal-dialog modal-dialog-lg" style="max-width: 650px;">
+      <div class="modal-header">
+        <div class="map-modal-title-wrap">
+          <i class="fa-solid fa-id-card"></i>
+          <div>
+            <h3 id="idProofModalTitle">Government ID Proof</h3>
+            <p id="idProofModalSubtitle">Resident identity details &amp; uploaded verification document</p>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" id="idProofModalClose" aria-label="Close ID Preview"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" style="padding: 22px;">
+        <div class="id-modal-meta-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 18px; background: var(--bg-card-subtle); padding: 14px 18px; border-radius: 12px; border: 1px solid var(--border-color);">
+          <div><small style="color:var(--text-muted);display:block;font-size:0.75rem;">Resident Name</small><strong id="idModalName" style="color:var(--text-main);">-</strong></div>
+          <div><small style="color:var(--text-muted);display:block;font-size:0.75rem;">Booking Reference</small><strong id="idModalRef" style="color:var(--primary); font-family:var(--font-mono, monospace);">-</strong></div>
+          <div><small style="color:var(--text-muted);display:block;font-size:0.75rem;">ID Document Type</small><strong id="idModalType" style="color:var(--text-main);">-</strong></div>
+          <div><small style="color:var(--text-muted);display:block;font-size:0.75rem;">ID Number</small><strong id="idModalNumber" style="color:var(--text-main); font-family:var(--font-mono, monospace);">-</strong></div>
+        </div>
+        <div class="id-modal-preview-box" id="idModalPreviewBox" style="text-align: center; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: #0b0f19; padding: 16px; min-height: 280px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+          <img id="idModalImg" src="" alt="Uploaded Govt ID" style="max-width: 100%; max-height: 480px; border-radius: 8px; object-fit: contain; display: none;">
+          <div id="idModalPdfBox" style="display: none; padding: 30px 20px; text-align: center;">
+            <i class="fa-solid fa-file-pdf" style="font-size: 3.5rem; color: #ef4444; margin-bottom: 14px;"></i>
+            <h4 style="color: #ffffff; margin-bottom: 8px;" id="idModalPdfName">Document.pdf</h4>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 18px;">PDF document attached to resident booking record.</p>
+            <a href="#" id="idModalPdfLink" target="_blank" rel="noopener" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Open / Download PDF
+            </a>
+          </div>
+          <p id="idModalNoDoc" style="color: var(--text-muted); display: none;">No document file attached for this booking.</p>
         </div>
       </div>
     </div>

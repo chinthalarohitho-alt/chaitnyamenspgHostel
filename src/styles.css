@@ -2738,9 +2738,178 @@ select.rsv-input,
 .rsv-field:has(.is-invalid) .field-error,
 .rsv-input-wrap:has(.is-invalid) + .field-error,
 .rsv-input.is-invalid ~ .field-error,
-.rsv-input.is-invalid + .field-error {
+.rsv-input.is-invalid + .field-error,
+.id-upload-dropzone.is-invalid + .field-error {
   display: flex;
 }
+
+/* ── Government ID Upload ── */
+.id-upload-dropzone {
+  position: relative;
+  display: block;
+  border: 2px dashed rgba(255, 107, 0, 0.35);
+  background: var(--bg-card-subtle, rgba(255, 255, 255, 0.02));
+  border-radius: var(--radius-sm, 10px);
+  padding: 16px;
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.2s ease);
+  overflow: hidden;
+}
+
+.id-upload-dropzone:hover {
+  border-color: var(--primary);
+  background: rgba(255, 107, 0, 0.05);
+}
+
+.id-upload-dropzone.is-dragover {
+  border-color: var(--primary);
+  background: rgba(255, 107, 0, 0.1);
+  transform: scale(1.01);
+}
+
+.id-upload-dropzone.is-invalid {
+  border-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.05) !important;
+}
+
+.id-file-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.id-upload-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  pointer-events: none;
+}
+
+.id-upload-icon {
+  font-size: 1.8rem;
+  color: var(--primary);
+  background: rgba(255, 107, 0, 0.12);
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.id-upload-dropzone:hover .id-upload-icon {
+  transform: translateY(-2px);
+}
+
+.id-upload-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.id-upload-title {
+  font-family: var(--font-heading);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.id-upload-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.id-file-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 14px;
+  position: relative;
+  z-index: 3;
+}
+
+.id-preview-thumb-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.id-preview-thumb-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.id-pdf-icon {
+  font-size: 1.8rem;
+  color: #ef4444;
+}
+
+.id-file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.id-file-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.id-file-size {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.id-file-remove-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  border-radius: 6px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.id-file-remove-btn:hover {
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #ef4444;
+}
+
+.rsv-label-hint {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
 
 /* ── Submit Button ── */
 .rsv-submit-btn {
@@ -4655,6 +4824,35 @@ select.rsv-input,
   color: #ffffff;
   border-color: #059669;
 }
+
+.table-act-btn.act-view-id {
+  background: rgba(147, 51, 234, 0.12);
+  color: #c084fc;
+  border-color: rgba(147, 51, 234, 0.35);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.table-act-btn.act-view-id:hover {
+  background: #9333ea;
+  color: #ffffff;
+  border-color: #9333ea;
+}
+
+.table-id-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.28);
+}
+
 
 .mgr-status-badge {
   display: inline-flex;

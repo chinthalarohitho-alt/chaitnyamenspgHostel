@@ -312,7 +312,10 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   text('Venkateshwara Colony, Naimnagar,', midX, curY, 8.5, reg, SLATE);
 
   curY -= 12;
-  if (b.workplace) text(`College/Org: ${b.workplace}`, M, curY, 8.5, reg, SLATE);
+  const residentIdLine = (b.id_type || b.id_number)
+    ? `Govt ID: ${b.id_type || 'ID'}${b.id_number ? ` (${b.id_number})` : ''}`
+    : (b.workplace ? `College/Org: ${b.workplace}` : '');
+  if (residentIdLine) text(residentIdLine, M, curY, 8.5, reg, SLATE);
   text('Hanamkonda, Telangana - 506001', midX, curY, 8.5, reg, SLATE);
 
   curY -= 12;
@@ -337,6 +340,15 @@ export async function buildInvoicePdfDoc(b, h = {}) {
     { label: 'Intended Stay Duration', val: b.duration || (calc.durMonths + ' Month' + (calc.durMonths > 1 ? 's' : '')) },
     { label: 'Monthly Subtotal (Rent)', val: 'Rs. ' + calc.monthlyRent.toLocaleString('en-IN') + ' / mo' },
   ];
+
+  if (b.id_type || b.id_number) {
+    tableRows.push({
+      label: 'Resident ID Verification',
+      val: `${b.id_type || 'Govt ID'}${b.id_number ? ` (${b.id_number})` : ''}`,
+      note: 'Verified Resident ID'
+    });
+  }
+
 
   const termSavingsVal = (b.term_savings ? parseInt(String(b.term_savings).replace(/[^\d]/g, ''), 10) : 0) || calc.termSavings;
   if (termSavingsVal > 0) {
