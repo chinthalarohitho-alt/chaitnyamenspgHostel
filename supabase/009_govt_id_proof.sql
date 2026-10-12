@@ -9,3 +9,6 @@ alter table public.bookings
 comment on column public.bookings.id_type is 'Type of government ID provided (e.g. Aadhaar Card, PAN Card, Driving License, Voter ID, Passport)';
 comment on column public.bookings.id_number is 'Government identification number provided by resident';
 comment on column public.bookings.id_proof_url is 'Base64 data URI or storage URL of uploaded ID document proof';
+
+-- Force Supabase PostgREST to reload schema cache immediately
+notify pgrst, 'reload schema';
