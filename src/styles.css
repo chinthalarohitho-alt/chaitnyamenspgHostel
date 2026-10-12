@@ -11690,3 +11690,325 @@ select:autofill {
     justify-content: center;
   }
 }
+
+/* ===================================================================
+   💵 CASH ON HAND PAYMENT OPTION STYLES
+   =================================================================== */
+
+/* Form Payment Option Grid */
+.pay-method-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.pay-method-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: rgba(17, 20, 26, 0.7);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.pay-method-card input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pay-method-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(201, 164, 92, 0.4);
+}
+
+.pay-method-card.is-selected {
+  background: rgba(201, 164, 92, 0.12);
+  border-color: #c9a45c;
+  box-shadow: 0 0 16px rgba(201, 164, 92, 0.2);
+}
+
+.pay-method-card .pm-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pay-method-card .pm-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.pay-method-card .pm-top i {
+  color: #c9a45c;
+  font-size: 1.05rem;
+}
+
+.pay-method-card .pm-content span {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.3;
+}
+
+.pay-method-card .pm-check {
+  font-size: 1.15rem;
+  color: rgba(255, 255, 255, 0.2);
+  transition: color 0.2s ease;
+}
+
+.pay-method-card.is-selected .pm-check {
+  color: #c9a45c;
+}
+
+/* Modal Payment Tabs in Step 2 */
+.pay-mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pay-mode-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.pay-mode-tab i {
+  font-size: 0.95rem;
+}
+
+.pay-mode-tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.pay-mode-tab.is-active {
+  background: #c9a45c;
+  color: #111827;
+  box-shadow: 0 4px 12px rgba(201, 164, 92, 0.35);
+  font-weight: 700;
+}
+
+/* Cash Button in Step 1 */
+.cstep-cash-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 18px;
+  border-radius: 12px;
+  background: rgba(201, 164, 92, 0.12);
+  border: 1.5px solid #c9a45c;
+  color: #c9a45c;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.cstep-cash-btn:hover {
+  background: #c9a45c;
+  color: #111827;
+  box-shadow: 0 4px 16px rgba(201, 164, 92, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Cash on Hand Card in Step 2 */
+.cash-pay-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(201, 164, 92, 0.3);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.cash-pay-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.cash-pay-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(201, 164, 92, 0.15);
+  border: 1px solid rgba(201, 164, 92, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c9a45c;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.cash-pay-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.cash-pay-subtitle {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.cash-pay-amount-box {
+  background: #11141a;
+  border: 1px dashed rgba(201, 164, 92, 0.4);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.cash-pay-lbl {
+  display: block;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+
+.cash-pay-amount {
+  display: block;
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #c9a45c;
+  font-family: var(--font-heading), system-ui, sans-serif;
+}
+
+.cash-pay-scope {
+  display: block;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 3px;
+}
+
+.cash-pay-perks {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cash-pay-perks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.4;
+}
+
+.cash-pay-perks li i {
+  color: #10b981;
+  font-size: 0.88rem;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.cstep-confirm-cash {
+  background: linear-gradient(135deg, #c9a45c 0%, #b38c44 100%) !important;
+  color: #111827 !important;
+  font-weight: 700 !important;
+}
+
+.cstep-confirm-cash:hover {
+  background: linear-gradient(135deg, #d4b26f 0%, #c9a45c 100%) !important;
+}
+
+/* Cash Confirmed Box in Step 3 */
+.cash-confirmed-box {
+  background: rgba(201, 164, 92, 0.08);
+  border: 1px solid rgba(201, 164, 92, 0.35);
+  border-radius: 12px;
+  padding: 18px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.cash-confirmed-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(201, 164, 92, 0.2);
+  color: #c9a45c;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10px;
+}
+
+.cash-confirmed-title {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.cash-confirmed-desc {
+  margin: 0 0 12px;
+  font-size: 0.86rem;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.5;
+}
+
+.cash-confirmed-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #c9a45c;
+  font-weight: 600;
+}
+
+/* Manager Portal Badges */
+.table-cash-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  border-radius: 5px;
+  color: #facc15;
+  font-size: 0.75rem;
+  font-weight: 700;
+}

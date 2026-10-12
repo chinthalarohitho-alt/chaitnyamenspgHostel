@@ -241,6 +241,8 @@ export async function buildInvoicePdf(
   rule(y, M, A4.w - M, GOLD, 1.0);
   y -= 20;
 
+  const isCash = b.payment_mode === "cash" || String(b.payment_mode || "").toLowerCase().includes("cash");
+
   const rows: Array<[string, string]> = [
     ["Room", b.room ?? "-"],
     ["Preferred floor", b.floor ?? "Any Floor"],
@@ -251,6 +253,7 @@ export async function buildInvoicePdf(
     rows.push(["Stay period covered", computedStayPeriod]);
   }
   rows.push(["Stay duration", b.duration ?? "-"]);
+  rows.push(["Payment Option", isCash ? "Cash on Hand (Pay at Hostel)" : "UPI / Online Transfer"]);
   rows.push([rentLabel, rentValue]);
   rows.push(["Security Deposit", depositValue]);
   rows.push(["Total Move-In Charges", `Rs. ${moveInTotal.toLocaleString("en-IN")}`]);
@@ -271,15 +274,15 @@ export async function buildInvoicePdf(
       color: IVORY,
       borderColor: BORDER, borderWidth: 1,
     });
-    text(opts.paid ? "MOVE-IN PAYMENT CONFIRMED" : "BOOKING CHARGES", M + 16, y - 12, 8.5, bold, GOLD);
+    text(opts.paid ? (isCash ? "CASH ON HAND VERIFIED" : "MOVE-IN PAYMENT CONFIRMED") : (isCash ? "CASH ON HAND (PAY AT HOSTEL)" : "BOOKING CHARGES"), M + 16, y - 12, 8.5, bold, GOLD);
     text(
-      opts.paid ? "Received & verified — thank you" : "Payable to confirm your room",
+      opts.paid ? (isCash ? "Verified cash payment — thank you" : "Received & verified — thank you") : (isCash ? "Pay in cash upon arrival at hostel" : "Payable to confirm your room"),
       M + 16, y - 28, 9.5, reg, SLATE,
     );
     textR(`Rs. ${amt.toLocaleString("en-IN")}`, A4.w - M - 16, y - 24, 19, bold, NAVY);
     y -= 74;
 
-    if (opts.utr) {
+    if (!isCash && opts.utr) {
       text(`UPI reference: ${opts.utr}`, M, y, 9, reg, SLATE);
       y -= 18;
     }
@@ -288,8 +291,12 @@ export async function buildInvoicePdf(
   // ---------- note ----------
   y -= 6;
   const note = opts.paid
-    ? "Token received. Your bed is held pending the manager's final confirmation."
-    : "This is an enquiry, not a confirmed booking. The manager will contact you to confirm bed availability.";
+    ? (isCash
+        ? "Cash payment verified by hostel management. Your bed is confirmed and held."
+        : "Payment verified against bank records. Your bed is confirmed and held.")
+    : (isCash
+        ? "This is a Cash on Hand booking enquiry. Move-in charges are payable upon arrival at the hostel. Until verification from the manager, this is not considered as paid."
+        : "This is an enquiry, not a confirmed booking. Until verification from the manager against bank records, this is not considered as paid.");
   for (const line of wrap(note, reg, 9.5, A4.w - M * 2)) {
     text(line, M, y, 9.5, reg, SLATE);
     y -= 13;

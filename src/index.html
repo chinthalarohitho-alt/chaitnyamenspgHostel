@@ -951,6 +951,35 @@
                     </div>
                   </div>
 
+                  <!-- 💳 Payment Option Preference -->
+                  <div class="rsv-field rsv-field-full">
+                    <label class="rsv-label">Payment Option Preference <span class="req">*</span></label>
+                    <div class="pay-method-grid">
+                      <label class="pay-method-card is-selected" id="payMethodCardUpi">
+                        <input type="radio" name="bookingPaymentMode" value="upi" checked>
+                        <div class="pm-content">
+                          <div class="pm-top">
+                            <i class="fa-solid fa-qrcode"></i>
+                            <strong>UPI / Online Transfer</strong>
+                          </div>
+                          <span>Instant digital transfer via QR / UPI</span>
+                        </div>
+                        <i class="fa-solid fa-circle-check pm-check"></i>
+                      </label>
+                      <label class="pay-method-card" id="payMethodCardCash">
+                        <input type="radio" name="bookingPaymentMode" value="cash">
+                        <div class="pm-content">
+                          <div class="pm-top">
+                            <i class="fa-solid fa-money-bill-wave"></i>
+                            <strong>Cash on Hand</strong>
+                          </div>
+                          <span>Pay in cash directly to manager upon arrival</span>
+                        </div>
+                        <i class="fa-solid fa-circle-check pm-check"></i>
+                      </label>
+                    </div>
+                  </div>
+
                   <!-- Unified Government ID Verification Box -->
                   <div class="rsv-field rsv-field-full rsv-id-unified-box">
                     <div class="rsv-id-box-header">
@@ -1437,13 +1466,19 @@
             <div><dt>Climate</dt><dd id="modalClimate">-</dd></div>
             <div><dt>Move-in</dt><dd id="modalDate">-</dd></div>
             <div><dt>Stay Period</dt><dd id="modalStayPeriod">-</dd></div>
+            <div><dt>Payment Mode</dt><dd id="modalPaymentMode">UPI Instant Transfer</dd></div>
             <div><dt>Total Move-In</dt><dd id="modalMoveInTotal">₹13,900</dd></div>
           </dl>
 
           <div class="cstep-actions cstep-actions-row">
-            <button type="button" class="cstep-next" id="cstepToPay" title="Pay Total Move-in Amount">
-              <span>Pay <strong id="cstepPayAmt">₹13,900</strong></span>
+            <button type="button" class="cstep-next" id="cstepToPay" title="Pay Online via UPI">
+              <i class="fa-solid fa-qrcode"></i>
+              <span>Pay via UPI (<strong id="cstepPayAmt">₹13,900</strong>)</span>
               <i class="fa-solid fa-arrow-right"></i>
+            </button>
+            <button type="button" class="cstep-cash-btn" id="cstepToCash" title="Pay Cash on Hand">
+              <i class="fa-solid fa-money-bill-wave"></i>
+              <span>Cash on Hand</span>
             </button>
             <a href="#" target="_blank" rel="noopener" class="confirm-wa" id="modalWhatsAppBtn" title="Confirm on WhatsApp">
               <i class="fa-brands fa-whatsapp"></i>
@@ -1456,40 +1491,91 @@
       <!-- ── STEP 2 ───────────────────────────────── -->
       <section class="cstep" data-step="2" id="upiToken">
         <div class="confirm-head">
-          <h3>Pay Total Move-In Amount</h3>
-          <p class="confirm-sub">Scan to pay <span class="upi-amount" id="upiAmount">₹13,900</span> total move-in amount (Rent + Refundable Deposit) via UPI to confirm your room.</p>
+          <h3 id="step2HeadTitle">Select Payment Method</h3>
+          <p class="confirm-sub" id="step2HeadSub">Choose your preferred way to settle the <span class="upi-amount" id="upiAmount">₹13,900</span> total move-in amount.</p>
         </div>
 
         <div class="confirm-body">
-          <div class="upi-qr-wrap">
-            <canvas id="upiQr" width="208" height="208" aria-label="UPI QR code"></canvas>
-            <div class="upi-vpa">
-              <span>UPI ID</span>
-              <code id="upiVpa">—</code>
-              <button type="button" class="upi-copy" id="upiCopy" aria-label="Copy UPI ID">
-                <i class="fa-solid fa-copy"></i>
+          <!-- Payment Option Switcher Tabs -->
+          <div class="pay-mode-tabs" id="payModeTabs" role="tablist">
+            <button type="button" class="pay-mode-tab is-active" id="payTabUpi" data-mode="upi" role="tab" aria-selected="true">
+              <i class="fa-solid fa-qrcode"></i>
+              <span>UPI / QR Scan</span>
+            </button>
+            <button type="button" class="pay-mode-tab" id="payTabCash" data-mode="cash" role="tab" aria-selected="false">
+              <i class="fa-solid fa-money-bill-wave"></i>
+              <span>Cash on Hand</span>
+            </button>
+          </div>
+
+          <!-- 1. UPI Mode Panel -->
+          <div class="pay-panel-wrap" id="payPanelUpi">
+            <div class="upi-qr-wrap">
+              <canvas id="upiQr" width="208" height="208" aria-label="UPI QR code"></canvas>
+              <div class="upi-vpa">
+                <span>UPI ID</span>
+                <code id="upiVpa">—</code>
+                <button type="button" class="upi-copy" id="upiCopy" aria-label="Copy UPI ID">
+                  <i class="fa-solid fa-copy"></i>
+                </button>
+              </div>
+            </div>
+
+            <a href="#" class="upi-open" id="upiOpen">
+              <i class="fa-solid fa-mobile-screen"></i> Open a UPI app
+            </a>
+
+            <!-- Shown only when the enquiry form was submitted without an
+                 email. Someone paying a token should get a receipt. -->
+            <div class="upi-email" id="upiEmailAsk" hidden>
+              <label for="upiEmailInput">Where should we send your invoice?</label>
+              <input type="email" id="upiEmailInput" placeholder="you@example.com"
+                     autocomplete="email" spellcheck="false" inputmode="email">
+              <span class="upi-msg" id="upiEmailMsg"></span>
+            </div>
+
+            <div class="cstep-actions">
+              <button type="button" class="cstep-next" id="cstepToUtr">
+                I've paid <i class="fa-solid fa-arrow-right"></i>
               </button>
+              <button type="button" class="cstep-skip" id="cstepSkipPay">Skip — settle on WhatsApp</button>
             </div>
           </div>
 
-          <a href="#" class="upi-open" id="upiOpen">
-            <i class="fa-solid fa-mobile-screen"></i> Open a UPI app
-          </a>
+          <!-- 2. Cash on Hand Panel -->
+          <div class="pay-panel-wrap" id="payPanelCash" style="display: none;">
+            <div class="cash-pay-card">
+              <div class="cash-pay-header">
+                <div class="cash-pay-icon">
+                  <i class="fa-solid fa-hand-holding-dollar"></i>
+                </div>
+                <div>
+                  <h4 class="cash-pay-title">Cash on Hand Payment</h4>
+                  <p class="cash-pay-subtitle">Pay directly to hostel manager upon arrival / check-in</p>
+                </div>
+              </div>
 
-          <!-- Shown only when the enquiry form was submitted without an
-               email. Someone paying a token should get a receipt. -->
-          <div class="upi-email" id="upiEmailAsk" hidden>
-            <label for="upiEmailInput">Where should we send your invoice?</label>
-            <input type="email" id="upiEmailInput" placeholder="you@example.com"
-                   autocomplete="email" spellcheck="false" inputmode="email">
-            <span class="upi-msg" id="upiEmailMsg"></span>
-          </div>
+              <div class="cash-pay-amount-box">
+                <span class="cash-pay-lbl">Total Cash Amount on Move-in</span>
+                <span class="cash-pay-amount" id="cashAmountDisp">₹13,900</span>
+                <span class="cash-pay-scope" id="cashScopeDisp">First month's rent + refundable deposit</span>
+              </div>
 
-          <div class="cstep-actions">
-            <button type="button" class="cstep-next" id="cstepToUtr">
-              I've paid <i class="fa-solid fa-arrow-right"></i>
-            </button>
-            <button type="button" class="cstep-skip" id="cstepSkipPay">Skip — settle on WhatsApp</button>
+              <ul class="cash-pay-perks">
+                <li><i class="fa-solid fa-circle-check"></i> <strong>Zero advance payment:</strong> Pay cash when you arrive at hostel.</li>
+                <li><i class="fa-solid fa-circle-check"></i> <strong>Official Invoice:</strong> Instantly generated with Cash on Hand tagged.</li>
+                <li><i class="fa-solid fa-circle-check"></i> <strong>Bed Confirmation:</strong> Finalized once manager verifies upon arrival.</li>
+              </ul>
+            </div>
+
+            <div class="cstep-actions">
+              <button type="button" class="cstep-next cstep-confirm-cash" id="cstepConfirmCash">
+                <i class="fa-solid fa-money-bill-wave"></i>
+                <span>Confirm Cash on Hand (<strong id="cashBtnAmt">₹13,900</strong>)</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
+              <button type="button" class="cstep-skip" id="cstepCashToUpi">Switch to UPI / Online transfer</button>
+            </div>
           </div>
         </div>
       </section>
@@ -1497,30 +1583,44 @@
       <!-- ── STEP 3 ───────────────────────────────── -->
       <section class="cstep" data-step="3">
         <div class="confirm-head">
-          <h3>Confirm your payment</h3>
-          <p class="confirm-sub">Enter the 12-digit UPI reference from your payment app.</p>
+          <h3 id="step3HeadTitle">Confirm your payment</h3>
+          <p class="confirm-sub" id="step3HeadSub">Enter the 12-digit UPI reference from your payment app.</p>
         </div>
 
         <div class="confirm-body">
-          <div class="upi-utr">
+          <div class="upi-utr" id="step3UpiArea">
             <div class="upi-utr-row">
               <input type="text" id="upiUtrInput" aria-label="12-digit UPI reference" inputmode="numeric" maxlength="12"
                      placeholder="123456789012" autocomplete="off">
               <button type="button" class="upi-submit" id="upiUtrBtn">Submit</button>
             </div>
             <span class="upi-msg" id="upiMsg"></span>
+            <p class="upi-note">
+              The manager checks this against the UPI notification before confirming your bed.
+            </p>
           </div>
 
-          <p class="upi-note">
-            The manager checks this against the UPI notification before confirming your bed.
-          </p>
+          <!-- Cash Confirmed Area in Step 3 -->
+          <div class="cash-confirmed-box" id="step3CashArea" style="display: none;">
+            <div class="cash-confirmed-icon">
+              <i class="fa-solid fa-hand-holding-dollar"></i>
+            </div>
+            <h4 class="cash-confirmed-title">Cash on Hand Registered</h4>
+            <p class="cash-confirmed-desc">
+              Your room reservation is registered under <strong>Cash on Hand</strong>. Please hand over the move-in payment of <strong id="step3CashAmt" style="color:#c9a45c;">₹13,900</strong> directly to the hostel manager when you arrive on your scheduled move-in date.
+            </p>
+            <div class="cash-confirmed-status">
+              <i class="fa-solid fa-clock"></i>
+              <span>Status: To be paid in cash to hostel manager at check-in</span>
+            </div>
+          </div>
 
           <div class="cstep-invoice-action" id="cstepInvoiceAction">
             <button type="button" class="confirm-download-invoice" id="downloadInvoiceBtn" title="Download Official Invoice PDF">
               <i class="fa-solid fa-file-arrow-down"></i>
               <span>Download Official Invoice (PDF)</span>
             </button>
-            <p class="cstep-invoice-disclaimer">
+            <p class="cstep-invoice-disclaimer" id="step3Disclaimer">
               <i class="fa-solid fa-triangle-exclamation"></i>
               <span><strong>Notice:</strong> Until verification from the hostel manager, this is <u>NOT considered as paid</u>.</span>
             </p>

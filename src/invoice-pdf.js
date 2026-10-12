@@ -437,8 +437,14 @@ export async function buildInvoicePdfDoc(b, h = {}) {
     text('Not considered paid', M + colW + 10, curY - 28, 7.5, bold, CRIMSON);
   }
 
+  const isCash = b.payment_mode === 'cash' ||
+                 b.paymentMode === 'cash' ||
+                 b.payment_method === 'cash' ||
+                 b.payment_method === 'Cash on Hand' ||
+                 String(b.payment_mode || b.paymentMode || b.payment_method || '').toLowerCase().includes('cash');
+
   text('PAYMENT MODE', M + colW * 2 + 10, curY - 6, 7.5, bold, SLATE);
-  text('UPI Instant Transfer', M + colW * 2 + 10, curY - 22, 10, bold, CHARCOAL);
+  text(isCash ? 'Cash on Hand' : 'UPI Instant Transfer', M + colW * 2 + 10, curY - 22, 10, bold, CHARCOAL);
 
   text('TOTAL AMOUNT', M + colW * 3 + 10, curY - 6, 7.5, bold, SLATE);
   text(totalPayableStr, M + colW * 3 + 10, curY - 22, 11, bold, NAVY);
@@ -655,17 +661,27 @@ export async function buildInvoicePdfDoc(b, h = {}) {
 
   if (isAccepted) {
     text('TOTAL MOVE-IN PAYMENT VERIFIED & CONFIRMED', M + 16, curY - 12, 8.5, bold, DEEP_GREEN);
-    text('Note: Full move-in payment (Rent + Refundable Deposit) verified against bank records. Bed confirmed.', M + 16, curY - 26, 8, obliq, SLATE);
-    const utrDisplay = rawUtr ? `Verified Bank UTR: ${rawUtr}` : 'Verified by Hostel Management';
+    const noteText = isCash
+      ? 'Note: Cash payment verified and officially accepted by hostel management. Bed confirmed.'
+      : 'Note: Full move-in payment (Rent + Refundable Deposit) verified against bank records. Bed confirmed.';
+    text(noteText, M + 16, curY - 26, 8, obliq, SLATE);
+    const utrDisplay = isCash
+      ? 'Verified Mode: Cash on Hand (Received in Full)'
+      : (rawUtr ? `Verified Bank UTR: ${rawUtr}` : 'Verified by Hostel Management');
     text(utrDisplay, M + 16, curY - 44, 9.5, bold, CHARCOAL);
     textR(totalPayableStr, A4.w - M - 18, curY - 20, 18, bold, NAVY);
     textR(`${totalPayableStr} — FULL PAYMENT`, A4.w - M - 18, curY - 40, 8.5, bold, DEEP_GREEN);
   } else {
-    text('PAYMENT STATUS: PENDING MANAGER VERIFICATION', M + 16, curY - 12, 8.5, bold, CRIMSON);
-    text('IMPORTANT: Until verification from the manager, this is NOT considered as paid.', M + 16, curY - 26, 8, bold, CHARCOAL);
-    const utrDisplay = rawUtr ? `Submitted UPI Ref (UTR): ${rawUtr}` : 'UPI Ref (UTR): Pending Submission';
+    text(isCash ? 'PAYMENT STATUS: PENDING VERIFICATION (CASH ON HAND)' : 'PAYMENT STATUS: PENDING MANAGER VERIFICATION', M + 16, curY - 12, 8.5, bold, CRIMSON);
+    const noteText = isCash
+      ? 'Payable in cash directly to the hostel manager upon arrival / move-in.'
+      : 'IMPORTANT: Until verification from the manager, this is NOT considered as paid.';
+    text(noteText, M + 16, curY - 26, 8, bold, CHARCOAL);
+    const utrDisplay = isCash
+      ? 'Payment Option: Cash on Hand (Pay at Hostel upon Arrival)'
+      : (rawUtr ? `Submitted UPI Ref (UTR): ${rawUtr}` : 'UPI Ref (UTR): Pending Submission');
     text(utrDisplay, M + 16, curY - 44, 9.5, bold, CHARCOAL);
-    textR('STATUS: UNVERIFIED', A4.w - M - 18, curY - 20, 13, bold, CRIMSON);
+    textR(isCash ? 'CASH ON ARRIVAL' : 'STATUS: UNVERIFIED', A4.w - M - 18, curY - 20, isCash ? 10.5 : 13, bold, CRIMSON);
     textR('NOT CONSIDERED AS PAID', A4.w - M - 18, curY - 38, 7.5, bold, CRIMSON);
   }
 
@@ -678,8 +694,12 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   curY -= 14;
 
   const validationNote = isAccepted
-    ? '- Payment Validation: Verified and officially accepted by hostel management against bank credit records.'
-    : '- STRICT PAYMENT POLICY: Until verification from the hostel manager against bank records, this is NOT considered as paid. Bed allocation is finalized only upon manager approval.';
+    ? (isCash
+        ? '- Payment Validation: Verified cash payment received and officially recorded by hostel management.'
+        : '- Payment Validation: Verified and officially accepted by hostel management against bank credit records.')
+    : (isCash
+        ? '- CASH PAYMENT POLICY: Cash on Hand is payable directly to the hostel manager on your move-in date. Bed allocation is finalized upon payment and manager verification.'
+        : '- STRICT PAYMENT POLICY: Until verification from the hostel manager against bank records, this is NOT considered as paid. Bed allocation is finalized only upon manager approval.');
 
   const notes = [
     validationNote,

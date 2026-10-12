@@ -134,6 +134,7 @@ export async function submitBooking(b) {
 
   const fullPayload = {
     ...basePayload,
+    payment_mode: b.payment_mode || 'upi',
     id_type: b.id_type || null,
     id_number: b.id_number || null,
     id_proof_url: b.id_proof_url || null
@@ -141,8 +142,8 @@ export async function submitBooking(b) {
 
   const { error } = await supabase.from('bookings').insert(fullPayload);
   if (error) {
-    // If the remote table has not yet run the migration for id columns, gracefully retry without them
-    if (error.message && (error.message.includes('id_type') || error.message.includes('id_proof') || error.message.includes('id_number'))) {
+    // If the remote table has not yet run the migration for new columns, gracefully retry without them
+    if (error.message && (error.message.includes('id_type') || error.message.includes('id_proof') || error.message.includes('id_number') || error.message.includes('payment_mode'))) {
       const fallback = await supabase.from('bookings').insert(basePayload);
       if (fallback.error) return { ok: false, error: fallback.error.message };
       return { ok: true };
@@ -257,19 +258,26 @@ export async function fetchBookings() {
 }
 
 /**
- * Manager-side: accept a booking and confirm the UPI UTR.
- * Marks payment as paid, status as accepted, records UTR, and emails verified receipt PDF.
+ * Manager-side: accept a booking and confirm the payment / UPI UTR.
+ * Marks payment as paid, status as accepted, records UTR (or cash mode), and emails verified receipt PDF.
  */
 export async function acceptBookingWithUtr(ref, utr, extra = {}) {
   const now = new Date().toISOString();
   const extraBooking = extra.booking || {};
+  const isCash = extraBooking.payment_mode === 'cash' ||
+                 extraBooking.paymentMode === 'cash' ||
+                 extraBooking.paymentMode === 'Cash on Hand';
+  const cleanUtr = isCash ? null : (utr || null);
+
   updateLocalBooking(ref, {
     status: 'accepted',
     paymentStatus: 'paid',
     payment_status: 'paid',
+    payment_mode: isCash ? 'cash' : (extraBooking.payment_mode || 'upi'),
+    paymentMode: isCash ? 'Cash on Hand' : (extraBooking.paymentMode || 'UPI Instant Transfer'),
     isVerified: true,
-    utr: utr,
-    upi_utr: utr,
+    utr: cleanUtr,
+    upi_utr: cleanUtr,
     paidAt: now,
     ...(extraBooking.monthly_rent ? { monthly_rent: extraBooking.monthly_rent } : {}),
     ...(extraBooking.payable_move_in ? { payable_move_in: extraBooking.payable_move_in } : {}),
@@ -281,16 +289,27 @@ export async function acceptBookingWithUtr(ref, utr, extra = {}) {
   if (supabase) {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      await supabase
+      const updatePayload = {
+        status: 'accepted',
+        payment_status: 'paid',
+        upi_utr: cleanUtr,
+        paid_at: now,
+        verified_by: user?.id ?? null
+      };
+      if (isCash) {
+        updatePayload.payment_mode = 'cash';
+      }
+      const { error: updErr } = await supabase
         .from('bookings')
-        .update({
-          status: 'accepted',
-          payment_status: 'paid',
-          upi_utr: utr,
-          paid_at: now,
-          verified_by: user?.id ?? null
-        })
+        .update(updatePayload)
         .eq('ref', ref);
+      if (updErr && updErr.message && updErr.message.includes('payment_mode')) {
+        delete updatePayload.payment_mode;
+        await supabase
+          .from('bookings')
+          .update(updatePayload)
+          .eq('ref', ref);
+      }
     } catch (err) {
       console.warn('[supabase] accept update failed:', err);
     }

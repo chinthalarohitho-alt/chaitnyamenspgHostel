@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
 
   const { data: booking, error } = await db
     .from("bookings")
-    .select("ref,name,phone,email,room,floor,move_in_date,duration,workplace,created_at,enquiry_mail_sent_at,receipt_sent_at,payment_status,upi_utr,paid_at")
+    .select("*")
     .eq("ref", ref)
     .maybeSingle();
 

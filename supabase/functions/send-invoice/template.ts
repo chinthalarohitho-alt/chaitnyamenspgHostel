@@ -24,6 +24,7 @@ export interface Booking {
   security_deposit?: string | null;
   payable_move_in?: string | null;
   stay_period?: string | null;
+  payment_mode?: string | null;
 }
 
 export interface Hostel {
@@ -55,6 +56,7 @@ function row(label: string, value: string, last = false) {
 /** Plain-text alternative. Every email should carry one. */
 export function invoiceText(b: Booking, h: Hostel, forManager = false, hasPdf = false, isReceipt = false): string {
   const stayPeriod = b.stay_period || (b.move_in_date ? calculateStayPeriod(b.move_in_date, b.duration) : null);
+  const isCash = b.payment_mode === "cash" || String(b.payment_mode || "").toLowerCase().includes("cash");
   return [
     isReceipt
       ? (forManager ? `Token verified — ${h.name}` : `Payment received — ${h.name}`)
@@ -64,6 +66,7 @@ export function invoiceText(b: Booking, h: Hostel, forManager = false, hasPdf = 
     `Name: ${b.name}`,
     `Phone: ${b.phone}`,
     b.email ? `Email: ${b.email}` : ``,
+    `Payment Option: ${isCash ? "Cash on Hand (Pay at Hostel upon Arrival)" : "UPI / Online Transfer"}`,
     b.room ? `Room: ${b.room}` : ``,
     b.floor ? `Preferred floor: ${b.floor}` : ``,
     b.move_in_date ? `Move-in: ${b.move_in_date}` : ``,
@@ -80,8 +83,12 @@ export function invoiceText(b: Booking, h: Hostel, forManager = false, hasPdf = 
     forManager
       ? `Contact the applicant on ${b.phone}.`
       : (isReceipt
-          ? `Your token has been received and your bed is held. The manager will be in touch about move-in.`
-          : `This is an enquiry, not a confirmed booking. The manager will contact you on ${b.phone} to confirm bed availability.`),
+          ? (isCash
+              ? `Your Cash on Hand booking is recorded and your bed is held. Please pay upon arrival at the hostel.`
+              : `Your payment has been verified and your bed is held. The manager will be in touch about move-in.`)
+          : (isCash
+              ? `This is a Cash on Hand enquiry. The manager will contact you on ${b.phone} to confirm bed availability. Payment is collected upon check-in.`
+              : `This is an enquiry, not a confirmed booking. The manager will contact you on ${b.phone} to confirm bed availability.`)),
     ``,
     `${h.name}`,
     `${h.address}`,
@@ -90,17 +97,20 @@ export function invoiceText(b: Booking, h: Hostel, forManager = false, hasPdf = 
 }
 
 export function invoiceHtml(b: Booking, h: Hostel, forManager = false, hasPdf = false, isReceipt = false): string {
+  const isCash = b.payment_mode === "cash" || String(b.payment_mode || "").toLowerCase().includes("cash");
   const first = esc(b.name.split(" ")[0] || b.name);
   const title = isReceipt
-    ? (forManager ? "Token verified" : "Payment received")
+    ? (forManager ? (isCash ? "Cash Booking Verified" : "Payment verified") : (isCash ? "Booking Confirmed (Cash on Hand)" : "Payment received"))
     : (forManager ? "New booking enquiry" : "We've got your enquiry");
   const lead = isReceipt
     ? (forManager
-        ? `You marked this token as received. The resident has been sent their invoice.`
-        : `Thanks ${first} — your booking token is confirmed and your bed is held. Your invoice is attached.`)
+        ? `You marked this booking as accepted. The resident has been sent their verified invoice.`
+        : (isCash
+            ? `Thanks ${first} — your booking is confirmed and your bed is held. Settle the move-in charges in cash upon arrival. Your verified invoice is attached.`
+            : `Thanks ${first} — your booking token is confirmed and your bed is held. Your invoice is attached.`))
     : (forManager
-        ? `A new enquiry came in from the website. No token has been paid yet.`
-        : `Thanks ${first} — here are your enquiry details. Keep the reference handy for your campus visit.`);
+        ? `A new enquiry came in from the website. Payment option: ${isCash ? "Cash on Hand" : "UPI Transfer"}.`
+        : `Thanks ${first} — here are your enquiry details. Keep the reference handy for your visit.`);
 
   const stayPeriod = b.stay_period || (b.move_in_date ? calculateStayPeriod(b.move_in_date, b.duration) : null);
   const waLink = `https://wa.me/${esc(h.whatsapp)}?text=${encodeURIComponent(`Hello, my booking reference is ${b.ref}`)}`;
@@ -155,6 +165,7 @@ export function invoiceHtml(b: Booking, h: Hostel, forManager = false, hasPdf = 
               ${row("Name", b.name)}
               ${row("Phone", b.phone)}
               ${b.email ? row("Email", b.email) : ""}
+              ${row("Payment Option", isCash ? "Cash on Hand (Pay at Hostel)" : "UPI / Online Transfer")}
               ${isReceipt && b.upi_utr ? row("UPI reference", b.upi_utr) : ""}
               ${b.room ? row("Room", b.room) : ""}
               ${b.floor ? row("Preferred floor", b.floor) : ""}

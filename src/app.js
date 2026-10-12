@@ -163,6 +163,13 @@ function showUpiToken(ref) {
   if (amtEl) amtEl.textContent = money;
   const payAmt = document.getElementById('cstepPayAmt');
   if (payAmt) payAmt.textContent = money;
+  const cashAmtDisp = document.getElementById('cashAmountDisp');
+  if (cashAmtDisp) cashAmtDisp.textContent = money;
+  const cashBtnAmt = document.getElementById('cashBtnAmt');
+  if (cashBtnAmt) cashBtnAmt.textContent = money;
+  const step3CashAmt = document.getElementById('step3CashAmt');
+  if (step3CashAmt) step3CashAmt.textContent = money;
+
   const vpaEl = document.getElementById('upiVpa');
   if (vpaEl) vpaEl.textContent = vpa;
   const openEl = document.getElementById('upiOpen');
@@ -180,6 +187,10 @@ function showUpiToken(ref) {
   if (btn) { btn.disabled = false; btn.textContent = 'Submit'; btn.dataset.ref = ref; }
   if (msg) { msg.textContent = ''; msg.className = 'upi-msg'; }
 
+  // Set initial tab based on booking context preference
+  const isCash = currentBookingContext?.payment_mode === 'cash';
+  switchConfirmPayTab(isCash ? 'cash' : 'upi');
+
   // Ask for an email only if the form didn't collect one. Casual browsers
   // are never nagged; anyone paying a token gets a receipt.
   const ask = document.getElementById('upiEmailAsk');
@@ -194,14 +205,117 @@ function showUpiToken(ref) {
   }
 }
 
+/** Switch between UPI and Cash on Hand tabs in confirmation Step 2 */
+function switchConfirmPayTab(mode) {
+  const isCash = mode === 'cash';
+  const tabUpi = document.getElementById('payTabUpi');
+  const tabCash = document.getElementById('payTabCash');
+  const panelUpi = document.getElementById('payPanelUpi');
+  const panelCash = document.getElementById('payPanelCash');
+  const headTitle = document.getElementById('step2HeadTitle');
+  const headSub = document.getElementById('step2HeadSub');
+  const modalPaymentMode = document.getElementById('modalPaymentMode');
+
+  if (tabUpi) {
+    tabUpi.classList.toggle('is-active', !isCash);
+    tabUpi.setAttribute('aria-selected', !isCash ? 'true' : 'false');
+  }
+  if (tabCash) {
+    tabCash.classList.toggle('is-active', isCash);
+    tabCash.setAttribute('aria-selected', isCash ? 'true' : 'false');
+  }
+  if (panelUpi) panelUpi.style.display = isCash ? 'none' : 'block';
+  if (panelCash) panelCash.style.display = isCash ? 'block' : 'none';
+
+  if (modalPaymentMode) {
+    modalPaymentMode.textContent = isCash ? 'Cash on Hand (Pay at Hostel)' : 'UPI Instant Transfer';
+  }
+
+  if (currentBookingContext) {
+    currentBookingContext.payment_mode = isCash ? 'cash' : 'upi';
+    currentBookingContext.paymentMode = isCash ? 'Cash on Hand' : 'UPI Instant Transfer';
+  }
+
+  const amt = document.getElementById('upiAmount')?.textContent || '₹13,900';
+  if (headTitle) {
+    headTitle.textContent = isCash ? 'Cash on Hand Payment' : 'Pay via UPI / QR Scan';
+  }
+  if (headSub) {
+    headSub.innerHTML = isCash
+      ? `Pay <span class="upi-amount">${amt}</span> in cash directly to the hostel manager when moving in.`
+      : `Scan to pay <span class="upi-amount">${amt}</span> total move-in amount via UPI to confirm your room.`;
+  }
+}
+
 /** One-time wiring for the step buttons. */
 function initConfirmSteps() {
   const dialog = document.querySelector('#confirmationModal .confirm-dialog');
   if (!dialog || dialog.dataset.stepsBound) return;
   dialog.dataset.stepsBound = '1';
 
-  document.getElementById('cstepToPay')?.addEventListener('click', () => gotoConfirmStep(2));
+  document.getElementById('cstepToPay')?.addEventListener('click', () => {
+    switchConfirmPayTab('upi');
+    gotoConfirmStep(2);
+  });
+
+  document.getElementById('cstepToCash')?.addEventListener('click', () => {
+    switchConfirmPayTab('cash');
+    gotoConfirmStep(2);
+  });
+
+  document.getElementById('payTabUpi')?.addEventListener('click', () => switchConfirmPayTab('upi'));
+  document.getElementById('payTabCash')?.addEventListener('click', () => switchConfirmPayTab('cash'));
+  document.getElementById('cstepCashToUpi')?.addEventListener('click', () => switchConfirmPayTab('upi'));
+
+  document.getElementById('cstepConfirmCash')?.addEventListener('click', () => {
+    if (currentBookingContext) {
+      currentBookingContext.payment_mode = 'cash';
+      currentBookingContext.paymentMode = 'Cash on Hand';
+      currentBookingContext.payment_status = 'unpaid';
+    }
+    const rref = currentBookingContext?.ref;
+    if (rref) {
+      updateLocalBooking(rref, { payment_mode: 'cash', paymentMode: 'Cash on Hand' });
+    }
+
+    const step3Title = document.getElementById('step3HeadTitle');
+    const step3Sub = document.getElementById('step3HeadSub');
+    const upiArea = document.getElementById('step3UpiArea');
+    const cashArea = document.getElementById('step3CashArea');
+    const invoiceAction = document.getElementById('cstepInvoiceAction');
+
+    if (step3Title) step3Title.textContent = 'Cash on Hand Registered';
+    if (step3Sub) step3Sub.textContent = 'Your booking is recorded. Settle in cash upon arrival.';
+    if (upiArea) upiArea.style.display = 'none';
+    if (cashArea) cashArea.style.display = 'block';
+    if (invoiceAction) invoiceAction.style.display = 'block';
+
+    tokenStepSettled = true;
+    gotoConfirmStep(3);
+
+    showSiteToast('Cash on Hand Selected', 'Booking recorded. You can download your invoice receipt below.', 'fa-solid fa-money-bill-wave');
+
+    if (currentBookingContext?.email) {
+      const cfg = getHostelConfig();
+      sendInvoiceEmail(currentBookingContext.ref, 'enquiry', {
+        email: currentBookingContext.email,
+        booking: currentBookingContext,
+        hostel: cfg?.texts
+      });
+    }
+  });
+
   document.getElementById('cstepToUtr')?.addEventListener('click', async () => {
+    const step3Title = document.getElementById('step3HeadTitle');
+    const step3Sub = document.getElementById('step3HeadSub');
+    const upiArea = document.getElementById('step3UpiArea');
+    const cashArea = document.getElementById('step3CashArea');
+
+    if (step3Title) step3Title.textContent = 'Confirm your payment';
+    if (step3Sub) step3Sub.textContent = 'Enter the 12-digit UPI reference from your payment app.';
+    if (upiArea) upiArea.style.display = 'block';
+    if (cashArea) cashArea.style.display = 'none';
+
     const ask = document.getElementById('upiEmailAsk');
     // Nothing asked for -> straight through.
     if (!ask || ask.hidden) { gotoConfirmStep(3); return; }
@@ -229,7 +343,17 @@ function initConfirmSteps() {
     ask.hidden = true;
     gotoConfirmStep(3);
   });
-  document.getElementById('cstepSkipPay')?.addEventListener('click', () => gotoConfirmStep(3));
+  document.getElementById('cstepSkipPay')?.addEventListener('click', () => {
+    const step3Title = document.getElementById('step3HeadTitle');
+    const step3Sub = document.getElementById('step3HeadSub');
+    const upiArea = document.getElementById('step3UpiArea');
+    const cashArea = document.getElementById('step3CashArea');
+    if (step3Title) step3Title.textContent = 'Confirm your payment';
+    if (step3Sub) step3Sub.textContent = 'Enter the 12-digit UPI reference or settle with manager.';
+    if (upiArea) upiArea.style.display = 'block';
+    if (cashArea) cashArea.style.display = 'none';
+    gotoConfirmStep(3);
+  });
 
   // Let a visitor step back by clicking a completed dot.
   dialog.querySelectorAll('.cstep-dot').forEach(dot => {
@@ -2527,11 +2651,16 @@ function renderEnquiriesTable() {
         const b = getStoredBookings().find(x => x.ref === ref);
         if (!b) return;
 
+        const isCash = b.payment_mode === 'cash' ||
+                       b.paymentMode === 'cash' ||
+                       b.paymentMode === 'Cash on Hand' ||
+                       String(b.payment_mode || b.paymentMode || '').toLowerCase().includes('cash');
+
         const inp = document.getElementById(`inlineUtr-${ref}`);
         const errEl = document.getElementById(`inlineError-${ref}`);
         const utr = (inp?.value || activeUtrValues[ref] || '').replace(/\D/g, '').slice(0, 12);
 
-        if (utr.length !== 12) {
+        if (!isCash && utr.length !== 12) {
           if (errEl) errEl.textContent = 'Please enter a valid 12-digit UPI transaction reference.';
           inp?.focus();
           return;
@@ -2557,16 +2686,18 @@ function renderEnquiriesTable() {
         const monthlyVal = `₹${calc.monthlyRent.toLocaleString('en-IN')}`;
 
         try {
-          await acceptBookingWithUtr(b.ref, utr, {
+          await acceptBookingWithUtr(b.ref, isCash ? null : utr, {
             email: b.email,
             booking: {
               ...b,
               status: 'accepted',
               paymentStatus: 'paid',
               payment_status: 'paid',
+              payment_mode: isCash ? 'cash' : (b.payment_mode || 'upi'),
+              paymentMode: isCash ? 'Cash on Hand' : (b.paymentMode || 'UPI Instant Transfer'),
               isVerified: true,
-              upi_utr: utr,
-              utr: utr,
+              upi_utr: isCash ? null : utr,
+              utr: isCash ? null : utr,
               paidAt: new Date().toISOString(),
               monthly_rent: monthlyVal,
               payable_move_in: moveInTotalVal,
@@ -2582,7 +2713,7 @@ function renderEnquiriesTable() {
           delete activeUtrValues[ref];
           showSiteToast(
             'Booking Accepted & Verified',
-            `Booking ${b.ref} confirmed. Official invoice emailed to ${b.email || 'resident'}.`,
+            `Booking ${b.ref} confirmed (${isCash ? 'Cash on Hand' : 'UPI'}). Official invoice emailed to ${b.email || 'resident'}.`,
             'fa-solid fa-circle-check'
           );
           await refreshBookings();
@@ -2764,6 +2895,10 @@ function renderEnquiriesTable() {
   tbody.innerHTML = bookings.map(b => {
     const isAccepted = b.status === 'accepted' || b.paymentStatus === 'paid';
     const isRejected = b.status === 'rejected';
+    const isCash = b.payment_mode === 'cash' ||
+                   b.paymentMode === 'cash' ||
+                   b.paymentMode === 'Cash on Hand' ||
+                   String(b.payment_mode || b.paymentMode || '').toLowerCase().includes('cash');
     const utrStr = (b.utr || b.upi_utr || '').trim();
     const cleanPhone = (b.phone || '').replace(/\D/g, '');
     const payableAmt = b.payable_move_in || (b.paymentAmount ? `₹${Number(b.paymentAmount).toLocaleString('en-IN')}` : '₹13,900');
@@ -2843,50 +2978,68 @@ function renderEnquiriesTable() {
                     <span class="enq-pill-lbl">Room:</span>
                     <span class="enq-pill-val">${escapeHtml(b.room || 'Room')} (${escapeHtml(b.floor || '1st Floor')})</span>
                   </div>
-                  <div class="enq-pill">
-                    <span class="enq-pill-lbl">Applicant UTR:</span>
-                    ${repCleanUtr ? `<span class="enq-pill-val text-green"><i class="fa-solid fa-check"></i> ${escapeHtml(repCleanUtr)}</span>` : `<span class="enq-pill-val" style="color:#94a3b8;font-style:italic;">Not reported</span>`}
-                  </div>
+                  ${isCash ? `
+                    <div class="enq-pill">
+                      <span class="enq-pill-lbl">Payment Mode:</span>
+                      <span class="enq-pill-val highlight"><i class="fa-solid fa-money-bill-wave"></i> Cash on Hand</span>
+                    </div>
+                  ` : `
+                    <div class="enq-pill">
+                      <span class="enq-pill-lbl">Applicant UTR:</span>
+                      ${repCleanUtr ? `<span class="enq-pill-val text-green"><i class="fa-solid fa-check"></i> ${escapeHtml(repCleanUtr)}</span>` : `<span class="enq-pill-val" style="color:#94a3b8;font-style:italic;">Not reported</span>`}
+                    </div>
+                  `}
                 </div>
 
-                <div class="enq-inline-input-area">
-                  <label class="enq-inline-label" for="inlineUtr-${b.ref}">
-                    <strong>Bank Transaction Reference (UTR)</strong>
-                    <span>Match with bank credit alert before accepting</span>
-                  </label>
-                  <div class="enq-inline-input-row">
-                    <input
-                      type="text"
-                      id="inlineUtr-${b.ref}"
-                      class="enq-inline-utr-input"
-                      inputmode="numeric"
-                      maxlength="12"
-                      placeholder="e.g. 523418902412"
-                      autocomplete="off"
-                      spellcheck="false"
-                      data-utr-ref="${b.ref}"
-                      value="${escapeHtml(curUtr)}"
-                    />
-                    <span class="enq-inline-counter ${isUtrReady ? 'is-valid' : ''}" id="inlineCounter-${b.ref}">
-                      ${curUtr.length} / 12
-                    </span>
+                ${isCash ? `
+                  <div class="cash-confirmed-box" style="margin-top:12px; margin-bottom:12px;">
+                    <div style="display:flex; align-items:center; gap:8px; font-weight:700; color:#38bdf8;">
+                      <i class="fa-solid fa-hand-holding-dollar"></i> Cash on Hand Verification
+                    </div>
+                    <p style="margin:6px 0 0; font-size:0.83rem; color:var(--text-muted); line-height:1.5;">
+                      Guest will pay <strong>${payableAmt}</strong> in cash directly to the manager upon arrival. Confirm to verify reservation and generate the official Cash on Hand invoice.
+                    </p>
                   </div>
+                ` : `
+                  <div class="enq-inline-input-area">
+                    <label class="enq-inline-label" for="inlineUtr-${b.ref}">
+                      <strong>Bank Transaction Reference (UTR)</strong>
+                      <span>Match with bank credit alert before accepting</span>
+                    </label>
+                    <div class="enq-inline-input-row">
+                      <input
+                        type="text"
+                        id="inlineUtr-${b.ref}"
+                        class="enq-inline-utr-input"
+                        inputmode="numeric"
+                        maxlength="12"
+                        placeholder="e.g. 523418902412"
+                        autocomplete="off"
+                        spellcheck="false"
+                        data-utr-ref="${b.ref}"
+                        value="${escapeHtml(curUtr)}"
+                      />
+                      <span class="enq-inline-counter ${isUtrReady ? 'is-valid' : ''}" id="inlineCounter-${b.ref}">
+                        ${curUtr.length} / 12
+                      </span>
+                    </div>
 
-                  ${repCleanUtr ? `
-                    <button type="button" class="enq-inline-quick-btn" data-inline-quick-utr="${escapeHtml(repCleanUtr)}" data-ref="${b.ref}">
-                      <i class="fa-solid fa-paste"></i> Use applicant-reported UTR (<strong>${escapeHtml(repCleanUtr)}</strong>)
-                    </button>
-                  ` : ''}
+                    ${repCleanUtr ? `
+                      <button type="button" class="enq-inline-quick-btn" data-inline-quick-utr="${escapeHtml(repCleanUtr)}" data-ref="${b.ref}">
+                        <i class="fa-solid fa-paste"></i> Use applicant-reported UTR (<strong>${escapeHtml(repCleanUtr)}</strong>)
+                      </button>
+                    ` : ''}
 
-                  <div class="enq-inline-error" id="inlineError-${b.ref}"></div>
-                </div>
+                    <div class="enq-inline-error" id="inlineError-${b.ref}"></div>
+                  </div>
+                `}
 
                 <div class="enq-inline-actions">
                   <button
                     type="button"
                     class="enq-inline-btn enq-inline-btn-confirm"
                     data-confirm-accept="${b.ref}"
-                    ${isUtrReady ? '' : 'disabled'}
+                    ${isCash || isUtrReady ? '' : 'disabled'}
                   >
                     <i class="fa-solid fa-check"></i> Confirm &amp; Accept Booking
                   </button>
@@ -2989,7 +3142,11 @@ function renderEnquiriesTable() {
         <td>
           <div style="font-weight:700; color:var(--text-main); font-size:0.92rem;">Deposit: ${depositVal}</div>
           <small style="color:var(--text-muted); font-size:0.75rem;">Move-in: ${payableAmt}</small>
-          ${utrStr ? `
+          ${isCash ? `
+            <div style="margin-top:4px;">
+              <span class="table-cash-badge"><i class="fa-solid fa-money-bill-wave"></i> Cash on Hand</span>
+            </div>
+          ` : (utrStr ? `
             <div style="margin-top:2px;">
               <small style="color:#10b981; font-family:var(--font-mono, monospace); font-weight:700;"><i class="fa-solid fa-receipt"></i> ${escapeHtml(utrStr)}</small>
             </div>
@@ -2997,7 +3154,7 @@ function renderEnquiriesTable() {
             <div style="margin-top:2px;">
               <small style="color:var(--text-muted); font-style:italic;">UTR: Pending</small>
             </div>
-          `}
+          `)}
         </td>
         <td>
           ${actionsHtml}
@@ -4508,6 +4665,16 @@ function initBookingForm() {
     });
   }
 
+  // Payment Option preference selection in reservation form
+  const payRadios = document.querySelectorAll('input[name="bookingPaymentMode"]');
+  payRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+      document.querySelectorAll('.pay-method-card').forEach(card => card.classList.remove('is-selected'));
+      const parentCard = radio.closest('.pay-method-card');
+      if (parentCard) parentCard.classList.add('is-selected');
+    });
+  });
+
   // ── Form Submit ──
   bookingForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -4667,6 +4834,9 @@ function initBookingForm() {
     const stayPeriodObj = calculateStayPeriod(chosenMoveInDate, sel.duration, sel.isDaily, sel.dailyDays);
     const stayPeriodDisplay = stayPeriodObj ? stayPeriodObj.displayText : sel.duration;
 
+    const chosenPayMode = document.querySelector('input[name="bookingPaymentMode"]:checked')?.value || 'upi';
+    const isCashSelected = chosenPayMode === 'cash';
+
     const newBooking = {
       ref: refId,
       name: fullName.value.trim(),
@@ -4684,6 +4854,8 @@ function initBookingForm() {
       id_type: idTypeVal,
       id_number: idCheck.value || guestIdNumber?.value?.trim() || '',
       id_proof_url: currentIdProof?.dataUrl || '',
+      payment_mode: chosenPayMode,
+      paymentMode: isCashSelected ? 'Cash on Hand' : 'UPI Instant Transfer',
       monthly_rent: monthlyTotalStr,
       term_savings: document.getElementById('dispDiscountVal')?.textContent || '',
       security_deposit: secDepositStr,
@@ -4699,6 +4871,8 @@ function initBookingForm() {
       ...newBooking,
       token_amount: moveInTotalNum,
       deposit_amount: secDepositNum,
+      payment_mode: chosenPayMode,
+      paymentMode: isCashSelected ? 'Cash on Hand' : 'UPI Instant Transfer',
       upi_utr: '',
       dateIssued: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
     };
@@ -4733,6 +4907,10 @@ function initBookingForm() {
     if (modalDate) modalDate.textContent = chosenMoveInDate;
     const modalStayPeriod = document.getElementById('modalStayPeriod');
     if (modalStayPeriod) modalStayPeriod.textContent = stayPeriodDisplay;
+    const modalPaymentMode = document.getElementById('modalPaymentMode');
+    if (modalPaymentMode) {
+      modalPaymentMode.textContent = isCashSelected ? 'Cash on Hand (Pay at Hostel)' : 'UPI Instant Transfer';
+    }
     const modalIdProof = document.getElementById('modalIdProof');
     if (modalIdProof) {
       const displayNum = idTypeVal === 'Aadhaar Card' && newBooking.id_number.length === 12
@@ -4754,7 +4932,8 @@ function initBookingForm() {
       `🏢 Preferred Floor: ${chosenFloor}\n` +
       `📅 Move-in Date: ${chosenMoveInDate}\n` +
       `🗓️ Stay Period: ${stayPeriodDisplay}\n` +
-      `⏳ Stay Duration: ${sel.duration}\n\n` +
+      `⏳ Stay Duration: ${sel.duration}\n` +
+      `💵 Payment Option: ${isCashSelected ? 'Cash on Hand (Pay upon arrival)' : 'UPI / Online Transfer'}\n\n` +
       `Please confirm bed availability and share room photos.`
     );
     const mgrWa = (cfg?.texts?.whatsapp || '919949785344').replace(/\D/g, '');
