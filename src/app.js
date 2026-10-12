@@ -437,7 +437,8 @@ function initConfirmSteps() {
         `🔢 UPI Ref (UTR): ${check.value}\n\n` +
         `Please verify the payment against bank records and confirm bed allocation.`
       );
-      waBtn2.href = `https://wa.me/919949785344?text=${waText}`;
+      const mgrWa = (getHostelConfig()?.texts?.whatsapp || '919949785344').replace(/\D/g, '');
+      waBtn2.href = `https://wa.me/${mgrWa}?text=${waText}`;
     }
   });
 }
@@ -3656,7 +3657,7 @@ function initRoomCalculator() {
   };
 
   function recalculate() {
-    const isAc = (currentClimate === 'ac');
+    const isAc = (currentClimate === 'ac' && currentRoom !== 'hall');
     const cfg = getHostelConfig();
     const formatInr = (n) => '₹' + n.toLocaleString('en-IN');
 
@@ -3671,6 +3672,11 @@ function initRoomCalculator() {
       const stayTotal = dailyPerDay * currentDailyDays;
       const securityDeposit = 0; // Deposit is completely waived for day-wise stay!
       const initialMoveIn = stayTotal;
+
+      const dispDailyRateTag = document.getElementById('dispDailyRateTag');
+      if (dispDailyRateTag) {
+        dispDailyRateTag.textContent = `${formatInr(dailyPerDay)} / day`;
+      }
 
       const stayPeriodInfo = moveInInput
         ? calculateStayPeriod(moveInInput, `${currentDailyDays} Days`, true, currentDailyDays)
@@ -4746,7 +4752,8 @@ function initBookingForm() {
       `⏳ Stay Duration: ${sel.duration}\n\n` +
       `Please confirm bed availability and share room photos.`
     );
-    const waHref = `https://wa.me/919949785344?text=${waText}`;
+    const mgrWa = (cfg?.texts?.whatsapp || '919949785344').replace(/\D/g, '');
+    const waHref = `https://wa.me/${mgrWa}?text=${waText}`;
     if (modalWhatsAppBtn) modalWhatsAppBtn.href = waHref;
     const waBtn2 = document.getElementById('modalWhatsAppBtn2');
     if (waBtn2) waBtn2.href = waHref;
@@ -5144,8 +5151,17 @@ function initCustomDatePicker() {
     clearBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       selectedDate = null;
-      if (hiddenInput) hiddenInput.value = '';
-      if (displayInput) displayInput.value = '';
+      if (hiddenInput) {
+        hiddenInput.value = '';
+        hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      if (displayInput) {
+        displayInput.value = '';
+        displayInput.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      if (typeof window.updateEstimatorFromActive === 'function') {
+        window.updateEstimatorFromActive();
+      }
       renderCalendar();
     });
   }

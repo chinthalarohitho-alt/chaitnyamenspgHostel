@@ -6,6 +6,8 @@
  * and web-safe fonts only — no flexbox, no grid, no external CSS.
  */
 
+import { calculateStayPeriod } from "./invoice-pdf.ts";
+
 export interface Booking {
   ref: string;
   name: string;
@@ -52,6 +54,7 @@ function row(label: string, value: string, last = false) {
 
 /** Plain-text alternative. Every email should carry one. */
 export function invoiceText(b: Booking, h: Hostel, forManager = false, hasPdf = false, isReceipt = false): string {
+  const stayPeriod = b.stay_period || (b.move_in_date ? calculateStayPeriod(b.move_in_date, b.duration) : null);
   return [
     isReceipt
       ? (forManager ? `Token verified — ${h.name}` : `Payment received — ${h.name}`)
@@ -64,7 +67,7 @@ export function invoiceText(b: Booking, h: Hostel, forManager = false, hasPdf = 
     b.room ? `Room: ${b.room}` : ``,
     b.floor ? `Preferred floor: ${b.floor}` : ``,
     b.move_in_date ? `Move-in: ${b.move_in_date}` : ``,
-    b.stay_period ? `Stay Period: ${b.stay_period}` : ``,
+    stayPeriod ? `Stay Period: ${stayPeriod}` : ``,
     b.duration ? `Stay: ${b.duration}` : ``,
     b.monthly_rent ? `Monthly Rent: ${b.monthly_rent} / mo` : ``,
     b.security_deposit ? `Security Deposit: ${b.security_deposit}` : ``,
@@ -99,6 +102,7 @@ export function invoiceHtml(b: Booking, h: Hostel, forManager = false, hasPdf = 
         ? `A new enquiry came in from the website. No token has been paid yet.`
         : `Thanks ${first} — here are your enquiry details. Keep the reference handy for your campus visit.`);
 
+  const stayPeriod = b.stay_period || (b.move_in_date ? calculateStayPeriod(b.move_in_date, b.duration) : null);
   const waLink = `https://wa.me/${esc(h.whatsapp)}?text=${encodeURIComponent(`Hello, my booking reference is ${b.ref}`)}`;
 
   return `<!doctype html>
@@ -155,7 +159,7 @@ export function invoiceHtml(b: Booking, h: Hostel, forManager = false, hasPdf = 
               ${b.room ? row("Room", b.room) : ""}
               ${b.floor ? row("Preferred floor", b.floor) : ""}
               ${b.move_in_date ? row("Move-in date", b.move_in_date) : ""}
-              ${b.stay_period ? row("Stay period", b.stay_period) : ""}
+              ${stayPeriod ? row("Stay period", stayPeriod) : ""}
               ${b.duration ? row("Stay duration", b.duration) : ""}
               ${b.monthly_rent ? row("Monthly Rent", `${b.monthly_rent} / mo`) : ""}
               ${b.security_deposit ? row("Security Deposit", b.security_deposit) : ""}

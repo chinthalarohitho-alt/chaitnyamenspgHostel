@@ -64,18 +64,23 @@ export function calculateStayPeriod(startDateStr, durationStr, isDaily = false, 
   if (!startDateStr || startDateStr === '-') return null;
 
   let d = null;
-  const m = String(startDateStr).match(/^(\d{1,2})\s+([A-Za-z]+),?\s+(\d{4})/);
-  if (m) {
-    const day = parseInt(m[1], 10);
-    const monthStr = m[2].toLowerCase().substring(0, 3);
-    const year = parseInt(m[3], 10);
-    const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
-    const month = months[monthStr] !== undefined ? months[monthStr] : 0;
-    d = new Date(year, month, day);
+  const isoM = String(startDateStr).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoM) {
+    d = new Date(parseInt(isoM[1], 10), parseInt(isoM[2], 10) - 1, parseInt(isoM[3], 10));
   } else {
-    const parsed = new Date(startDateStr);
-    if (!isNaN(parsed.getTime())) {
-      d = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+    const m = String(startDateStr).match(/^(\d{1,2})\s+([A-Za-z]+),?\s+(\d{4})/);
+    if (m) {
+      const day = parseInt(m[1], 10);
+      const monthStr = m[2].toLowerCase().substring(0, 3);
+      const year = parseInt(m[3], 10);
+      const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+      const month = months[monthStr] !== undefined ? months[monthStr] : 0;
+      d = new Date(year, month, day);
+    } else {
+      const parsed = new Date(startDateStr);
+      if (!isNaN(parsed.getTime())) {
+        d = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+      }
     }
   }
 
@@ -88,7 +93,8 @@ export function calculateStayPeriod(startDateStr, durationStr, isDaily = false, 
   const daily = Boolean(isDaily || durStr.toLowerCase().includes('day'));
 
   if (daily) {
-    const days = parseInt(durCount || durStr.replace(/[^\d]/g, ''), 10) || 1;
+    const rawDays = parseInt(durCount || durStr.replace(/[^\d]/g, ''), 10);
+    const days = (!isNaN(rawDays) && rawDays > 0) ? rawDays : 1;
     // Count starts directly on the move-in date (14th = Day 1).
     // For 1 day: 14th only.
     // For N days: 14th through 14 + (N - 1)th.
@@ -110,9 +116,17 @@ export function calculateStayPeriod(startDateStr, durationStr, isDaily = false, 
       displayText: `${startFmt} to ${endFmt} (${days} Days - starts ${getOrdinal(d.getDate())})`
     };
   } else {
-    const months = parseInt(durCount || durStr.replace(/[^\d]/g, ''), 10) || 1;
+    const rawMonths = parseInt(durCount || durStr.replace(/[^\d]/g, ''), 10);
+    const months = (!isNaN(rawMonths) && rawMonths > 0) ? rawMonths : 1;
     const startFmt = fmt(d);
-    const end = new Date(d.getFullYear(), d.getMonth() + months, d.getDate() - 1);
+    
+    // Clamp to last day of expected target month to avoid JavaScript overflow
+    const maxDayInTargetMonth = new Date(d.getFullYear(), d.getMonth() + months + 1, 0).getDate();
+    const desiredDay = Math.min(d.getDate() - 1, maxDayInTargetMonth);
+    const end = desiredDay <= 0
+      ? new Date(d.getFullYear(), d.getMonth() + months, 0)
+      : new Date(d.getFullYear(), d.getMonth() + months, desiredDay);
+
     const endFmt = fmt(end);
     return {
       startDate: startFmt,
@@ -179,7 +193,7 @@ export function calculateInvoicePricing(b = {}, p = {}) {
   let dailyRate = 0;
 
   if (isDaily) {
-    durDays = parseInt(durStr.replace(/[^\d]/g, ''), 10) || 1;
+    durDays = b.daily_days || b.dailyDays || parseInt(durStr.replace(/[^\d]/g, ''), 10) || 1;
     const dailyBase = Number(pricing.dailyRate) || 350;
     const dailyAc = Number(pricing.dailyAcAdd) || 100;
     dailyRate = dailyBase + (isAc ? dailyAc : 0);

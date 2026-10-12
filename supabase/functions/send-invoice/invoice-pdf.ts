@@ -31,6 +31,70 @@ export interface InvoiceOpts {
   pricing?: Record<string, unknown>;
 }
 
+function getOrdinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+export function calculateStayPeriod(
+  startDateStr: string | null | undefined,
+  durationStr: string | null | undefined,
+): string | null {
+  if (!startDateStr || startDateStr === "-") return null;
+  let d: Date | null = null;
+  const isoM = String(startDateStr).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoM) {
+    d = new Date(parseInt(isoM[1], 10), parseInt(isoM[2], 10) - 1, parseInt(isoM[3], 10));
+  } else {
+    const m = String(startDateStr).match(/^(\d{1,2})\s+([A-Za-z]+),?\s+(\d{4})/);
+    if (m) {
+      const day = parseInt(m[1], 10);
+      const monthStr = m[2].toLowerCase().substring(0, 3);
+      const year = parseInt(m[3], 10);
+      const months: Record<string, number> = {
+        jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+        jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+      };
+      const month = months[monthStr] !== undefined ? months[monthStr] : 0;
+      d = new Date(year, month, day);
+    } else {
+      const parsed = new Date(startDateStr);
+      if (!isNaN(parsed.getTime())) {
+        d = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+      }
+    }
+  }
+  if (!d) return null;
+
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const fmt = (dt: Date) => `${dt.getDate()} ${monthNames[dt.getMonth()]}, ${dt.getFullYear()}`;
+  const durStr = String(durationStr ?? "1 Month");
+  const isDaily = durStr.toLowerCase().includes("day");
+
+  if (isDaily) {
+    const rawDays = parseInt(durStr.replace(/[^\d]/g, ""), 10);
+    const days = (!isNaN(rawDays) && rawDays > 0) ? rawDays : 1;
+    const startFmt = fmt(d);
+    if (days <= 1) {
+      return `${startFmt} (1 Day - starts ${getOrdinal(d.getDate())})`;
+    }
+    const end = new Date(d.getFullYear(), d.getMonth(), d.getDate() + (days - 1));
+    return `${startFmt} to ${fmt(end)} (${days} Days - starts ${getOrdinal(d.getDate())})`;
+  } else {
+    const rawMonths = parseInt(durStr.replace(/[^\d]/g, ""), 10);
+    const months = (!isNaN(rawMonths) && rawMonths > 0) ? rawMonths : 1;
+    const startFmt = fmt(d);
+    const maxDayInTargetMonth = new Date(d.getFullYear(), d.getMonth() + months + 1, 0).getDate();
+    const desiredDay = Math.min(d.getDate() - 1, maxDayInTargetMonth);
+    const end = desiredDay <= 0
+      ? new Date(d.getFullYear(), d.getMonth() + months, 0)
+      : new Date(d.getFullYear(), d.getMonth() + months, desiredDay);
+
+    return `${startFmt} to ${fmt(end)} (${months} Month${months > 1 ? "s" : ""} - starts ${getOrdinal(d.getDate())})`;
+  }
+}
+
 export async function buildInvoicePdf(
   b: Booking,
   h: Hostel,
@@ -182,8 +246,9 @@ export async function buildInvoicePdf(
     ["Preferred floor", b.floor ?? "Any Floor"],
     ["Move-in date", b.move_in_date ?? "-"],
   ];
-  if (b.stay_period) {
-    rows.push(["Stay period covered", b.stay_period]);
+  const computedStayPeriod = b.stay_period || calculateStayPeriod(b.move_in_date, b.duration);
+  if (computedStayPeriod) {
+    rows.push(["Stay period covered", computedStayPeriod]);
   }
   rows.push(["Stay duration", b.duration ?? "-"]);
   rows.push([rentLabel, rentValue]);
