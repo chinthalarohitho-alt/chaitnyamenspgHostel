@@ -35,6 +35,26 @@ function cleanStr(val) {
     .trim();
 }
 
+/** Greedy word wrap against real measured glyph widths */
+function wrapText(str, font, size, maxW) {
+  const cleaned = cleanStr(str);
+  if (!cleaned) return [];
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let currentLine = '';
+  for (const word of words) {
+    const candidate = currentLine ? `${currentLine} ${word}` : word;
+    if (font.widthOfTextAtSize(candidate, size) > maxW && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = candidate;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+}
+
 /**
  * Format INR number with Rs. prefix
  */
@@ -320,7 +340,24 @@ export async function buildInvoicePdfDoc(b, h = {}) {
     console.warn('[invoice-pdf] Logo embed failed, falling back to text:', err);
   }
 
-  const hostelName = h.name || 'Chaitanya Mens PG & Hostel';
+  // Live hostel details with robust fallback to cache or defaults
+  let storedTexts = {};
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('chaitanya_hostel_config');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.texts) storedTexts = parsed.texts;
+      }
+    } catch (_) {}
+  }
+
+  const hostelName = h.name || b.hostel_name || storedTexts.hostelName || 'Chaitanya Mens PG & Hostel';
+  const hostelPhone = h.phone || b.hostel_phone || storedTexts.phone || '+91 99497 85344';
+  const rawEmail = h.email || b.hostel_email || storedTexts.email;
+  const hostelEmail = (rawEmail && rawEmail !== 'jareenaworks@gmail.com') ? rawEmail : 'chaitnyamenspg@gmail.com';
+  const hostelAddress = h.address || b.hostel_address || storedTexts.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, NGO's Colony, Naimnagar, Hanamkonda, Telangana – 506001";
+  const visitingHours = h.visitingHours || storedTexts.visitingHours || '24 hrs';
   if (logoImage) {
     const logoH = 58;
     const logoW = Math.round(logoH * (922 / 380)); // 141
@@ -410,6 +447,7 @@ export async function buildInvoicePdfDoc(b, h = {}) {
 
   // 3. TWO-COLUMN: BILLED TO vs HOSTEL CONTACT
   const midX = M + (A4.w - M * 2) * 0.50;
+  const halfColW = (A4.w - M * 2) * 0.50 - 16;
 
   text('BILLED TO (RESIDENT)', M, curY, 8.5, bold, NAVY);
   text('HOSTEL DETAILS', midX, curY, 8.5, bold, NAVY);
@@ -421,26 +459,33 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   text(b.name || 'Resident Name', M, curY, 11, bold, CHARCOAL);
   text(hostelName, midX, curY, 10.5, bold, CHARCOAL);
 
-  curY -= 14;
-  text(`Phone: ${b.phone || '-'}`, M, curY, 8.5, reg, CHARCOAL);
-  text('18-5-38/1, Beside Siva Kumar Clinic,', midX, curY, 8.5, reg, SLATE);
+  let leftY = curY;
+  leftY -= 14;
+  text(`Phone: ${b.phone || '-'}`, M, leftY, 8.5, reg, CHARCOAL);
 
-  curY -= 12;
-  if (b.email) text(`Email: ${b.email}`, M, curY, 8.5, reg, SLATE);
-  text('Venkateshwara Colony, Naimnagar,', midX, curY, 8.5, reg, SLATE);
+  if (b.email) {
+    leftY -= 12;
+    text(`Email: ${b.email}`, M, leftY, 8.5, reg, SLATE);
+  }
 
-  curY -= 12;
   const residentIdLine = (b.id_type || b.id_number)
     ? `Govt ID: ${b.id_type || 'ID'}${b.id_number ? ` (${b.id_number})` : ''}`
     : (b.workplace ? `College/Org: ${b.workplace}` : '');
-  if (residentIdLine) text(residentIdLine, M, curY, 8.5, reg, SLATE);
-  text('Hanamkonda, Telangana - 506001', midX, curY, 8.5, reg, SLATE);
+  if (residentIdLine) {
+    leftY -= 12;
+    text(residentIdLine, M, leftY, 8.5, reg, SLATE);
+  }
 
-  curY -= 12;
-  const hostelEmail = (h.email && h.email !== 'jareenaworks@gmail.com') ? h.email : 'chaitnyamenspg@gmail.com';
-  text(`Phone: ${h.phone || '+91 99497 85344'} | ${hostelEmail}`, midX, curY, 8, reg, SLATE);
+  let rightY = curY - 2;
+  const addressLines = wrapText(hostelAddress, reg, 8.5, halfColW);
+  for (const aLine of addressLines) {
+    rightY -= 12;
+    text(aLine, midX, rightY, 8.5, reg, SLATE);
+  }
+  rightY -= 12;
+  text(`Phone: ${hostelPhone} | ${hostelEmail}`, midX, rightY, 8, reg, SLATE);
 
-  curY -= 20;
+  curY = Math.min(leftY, rightY) - 18;
 
   // 4. BOOKING PARTICULARS & PRICING BREAKDOWN TABLE
   text('BOOKING & ACCOMMODATION CHARGES', M, curY, 8.5, bold, NAVY);
@@ -640,7 +685,7 @@ export async function buildInvoicePdfDoc(b, h = {}) {
     validationNote,
     '- 100% Refundable Deposit: The security deposit is refunded within 3 days of vacating with 30 days notice.',
     '- Inclusions: 3 daily hygienic homely meals, high-speed Wi-Fi, 24/7 CCTV, RO purified water, biometric access.',
-    '- Visiting Hours: 24/7 access with biometric security for enrolled hostel residents.',
+    `- Visiting Hours: ${visitingHours} access with biometric security for enrolled hostel residents.`,
   ];
 
   for (const n of notes) {
@@ -651,7 +696,14 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   // 7. FOOTER
   rule(M + 36, M, A4.w - M, BORDER, 0.8);
   text(`${hostelName} - Official Booking Receipt`, M, M + 22, 8.5, bold, CHARCOAL);
-  text('18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda | +91 99497 85344', M, M + 10, 7.5, reg, SLATE);
+  let footerSummary = `${hostelAddress} | ${hostelPhone}`;
+  if (reg.widthOfTextAtSize(cleanStr(footerSummary), 7.5) > (A4.w - M * 2)) {
+    while (footerSummary.length > 20 && reg.widthOfTextAtSize(cleanStr(footerSummary + '...'), 7.5) > (A4.w - M * 2)) {
+      footerSummary = footerSummary.slice(0, -1);
+    }
+    footerSummary += '...';
+  }
+  text(footerSummary, M, M + 10, 7.5, reg, SLATE);
   textR('Computer generated - valid without physical signature', A4.w - M, M + 22, 7.5, obliq, SLATE);
 
   return await doc.save();

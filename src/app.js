@@ -320,7 +320,8 @@ function initConfirmSteps() {
       name: cfg?.texts?.hostelName || 'Chaitanya Mens PG & Hostel',
       phone: cfg?.texts?.phone || '+91 99497 85344',
       email: (cfg?.texts?.email && cfg?.texts?.email !== 'jareenaworks@gmail.com') ? cfg.texts.email : 'chaitnyamenspg@gmail.com',
-      address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda",
+      address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, NGO's Colony, Naimnagar, Hanamkonda, Telangana – 506001",
+      visitingHours: cfg?.texts?.visitingHours || '24 hrs',
       pricing: cfg?.pricing
     };
 
@@ -403,7 +404,8 @@ function initConfirmSteps() {
       name: cfg?.texts?.hostelName || 'Chaitanya Mens PG & Hostel',
       phone: cfg?.texts?.phone || '+91 99497 85344',
       email: (cfg?.texts?.email && cfg?.texts?.email !== 'jareenaworks@gmail.com') ? cfg.texts.email : 'chaitnyamenspg@gmail.com',
-      address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda",
+      address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, NGO's Colony, Naimnagar, Hanamkonda, Telangana – 506001",
+      visitingHours: cfg?.texts?.visitingHours || '24 hrs',
       pricing: cfg?.pricing
     };
     if (currentBookingContext) {
@@ -2543,7 +2545,8 @@ function renderEnquiriesTable() {
           name: cfg?.texts?.hostelName || 'Chaitanya Mens PG & Hostel',
           phone: cfg?.texts?.phone || '+91 99497 85344',
           email: (cfg?.texts?.email && cfg?.texts?.email !== 'jareenaworks@gmail.com') ? cfg.texts.email : 'chaitnyamenspg@gmail.com',
-          address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda",
+          address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, NGO's Colony, Naimnagar, Hanamkonda, Telangana – 506001",
+          visitingHours: cfg?.texts?.visitingHours || '24 hrs',
           pricing: cfg?.pricing
         };
 
@@ -2634,7 +2637,8 @@ function renderEnquiriesTable() {
           name: cfg?.texts?.hostelName || 'Chaitanya Mens PG & Hostel',
           phone: cfg?.texts?.phone || '+91 99497 85344',
           email: (cfg?.texts?.email && cfg?.texts?.email !== 'jareenaworks@gmail.com') ? cfg.texts.email : 'chaitnyamenspg@gmail.com',
-          address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda",
+          address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, NGO's Colony, Naimnagar, Hanamkonda, Telangana – 506001",
+          visitingHours: cfg?.texts?.visitingHours || '24 hrs',
           pricing: cfg?.pricing
         };
         const r = await sendInvoiceEmail(rref, 'receipt', {
@@ -2679,7 +2683,8 @@ function renderEnquiriesTable() {
           name: cfg?.texts?.hostelName || 'Chaitanya Mens PG & Hostel',
           phone: cfg?.texts?.phone || '+91 99497 85344',
           email: (cfg?.texts?.email && cfg?.texts?.email !== 'jareenaworks@gmail.com') ? cfg.texts.email : 'chaitnyamenspg@gmail.com',
-          address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda",
+          address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, NGO's Colony, Naimnagar, Hanamkonda, Telangana – 506001",
+          visitingHours: cfg?.texts?.visitingHours || '24 hrs',
           pricing: cfg?.pricing
         };
         try {

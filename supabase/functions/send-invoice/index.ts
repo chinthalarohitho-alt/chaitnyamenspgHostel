@@ -48,9 +48,12 @@ Deno.serve(async (req) => {
     return json({ error: "Supabase env missing" }, 500);
   }
 
-  let ref: string, type: string;
+  let ref: string, type: string, extraHostel: Record<string, string> | undefined;
   try {
-    ({ ref, type = "enquiry" } = await req.json());
+    const body = await req.json();
+    ref = body.ref;
+    type = body.type || "enquiry";
+    extraHostel = (body.hostel || body.extra?.hostel) as Record<string, string> | undefined;
   } catch {
     return json({ error: "Invalid JSON body" }, 400);
   }
@@ -88,11 +91,11 @@ Deno.serve(async (req) => {
     .from("site_config").select("texts,pricing").eq("id", "main").maybeSingle();
   const t = (cfg?.texts ?? {}) as Record<string, string>;
   const hostel: Hostel = {
-    name: t.hostelName ?? "Chaitanya Mens PG & Hostel",
-    phone: t.phone ?? "",
-    whatsapp: t.whatsapp ?? "",
-    email: t.email ?? GMAIL_USER,
-    address: t.address ?? "",
+    name: extraHostel?.name || t.hostelName || "Chaitanya Mens PG & Hostel",
+    phone: extraHostel?.phone || t.phone || "+91 99497 85344",
+    whatsapp: extraHostel?.whatsapp || t.whatsapp || "919949785344",
+    email: (extraHostel?.email && extraHostel.email !== "jareenaworks@gmail.com") ? extraHostel.email : (t.email || GMAIL_USER),
+    address: extraHostel?.address || t.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, NGO's Colony, Naimnagar, Hanamkonda, Telangana – 506001",
   };
 
   const p = (cfg?.pricing ?? {}) as Record<string, unknown>;
