@@ -121,11 +121,19 @@ Deno.serve(async (req) => {
   const durMonths = parseInt(durStr.replace(/[^\d]/g, ""), 10) || 1;
   const moveInTotal = (monthlyRent * durMonths) + secDeposit;
 
+  const isAdvance = booking.payment_mode === "advance" || String(booking.payment_mode || "").toLowerCase().includes("advance");
+  const advanceAmount = isAdvance
+    ? Math.min(moveInTotal, Number(booking.advance_amount || p.advanceAmount || p.tokenAmount || 1000))
+    : null;
+  const balanceAmount = isAdvance ? Math.max(0, moveInTotal - (advanceAmount || 0)) : null;
+
   const b: Booking = {
     ...booking,
     monthly_rent: `Rs. ${monthlyRent.toLocaleString("en-IN")}`,
     security_deposit: `Rs. ${secDeposit.toLocaleString("en-IN")}`,
     payable_move_in: `Rs. ${moveInTotal.toLocaleString("en-IN")}`,
+    advance_amount: advanceAmount,
+    balance_amount: balanceAmount,
   };
   const managerTo = hostel.email || GMAIL_USER;
 
@@ -137,7 +145,7 @@ Deno.serve(async (req) => {
     try {
       const bytes = await buildInvoicePdf(b, hostel, {
         paid: true,
-        tokenAmount,
+        tokenAmount: isAdvance ? (advanceAmount || 1000) : tokenAmount,
         utr: booking.upi_utr,
         pricing: p,
       });

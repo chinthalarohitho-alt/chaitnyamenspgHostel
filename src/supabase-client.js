@@ -135,6 +135,8 @@ export async function submitBooking(b) {
   const fullPayload = {
     ...basePayload,
     payment_mode: b.payment_mode || 'upi',
+    advance_amount: b.advance_amount ?? null,
+    balance_amount: b.balance_amount ?? null,
     id_type: b.id_type || null,
     id_number: b.id_number || null,
     id_proof_url: b.id_proof_url || null
@@ -143,7 +145,7 @@ export async function submitBooking(b) {
   const { error } = await supabase.from('bookings').insert(fullPayload);
   if (error) {
     // If the remote table has not yet run the migration for new columns, gracefully retry without them
-    if (error.message && (error.message.includes('id_type') || error.message.includes('id_proof') || error.message.includes('id_number') || error.message.includes('payment_mode'))) {
+    if (error.message && (error.message.includes('id_type') || error.message.includes('id_proof') || error.message.includes('id_number') || error.message.includes('payment_mode') || error.message.includes('advance_amount') || error.message.includes('balance_amount'))) {
       const fallback = await supabase.from('bookings').insert(basePayload);
       if (fallback.error) return { ok: false, error: fallback.error.message };
       return { ok: true };
@@ -267,14 +269,22 @@ export async function acceptBookingWithUtr(ref, utr, extra = {}) {
   const isCash = extraBooking.payment_mode === 'cash' ||
                  extraBooking.paymentMode === 'cash' ||
                  extraBooking.paymentMode === 'Cash on Hand';
+  const isAdvance = extraBooking.payment_mode === 'advance' ||
+                    extraBooking.paymentMode === 'advance' ||
+                    extraBooking.paymentMode === 'Advance Token';
   const cleanUtr = isCash ? null : (utr || null);
+
+  const finalMode = extraBooking.payment_mode || (isCash ? 'cash' : (isAdvance ? 'advance' : 'upi'));
+  const finalModeName = extraBooking.paymentMode || (isCash ? 'Cash on Hand' : (isAdvance ? 'Advance Token' : 'UPI Instant Transfer'));
 
   updateLocalBooking(ref, {
     status: 'accepted',
     paymentStatus: 'paid',
     payment_status: 'paid',
-    payment_mode: isCash ? 'cash' : (extraBooking.payment_mode || 'upi'),
-    paymentMode: isCash ? 'Cash on Hand' : (extraBooking.paymentMode || 'UPI Instant Transfer'),
+    payment_mode: finalMode,
+    paymentMode: finalModeName,
+    advance_amount: extraBooking.advance_amount ?? null,
+    balance_amount: extraBooking.balance_amount ?? null,
     isVerified: true,
     utr: cleanUtr,
     upi_utr: cleanUtr,
@@ -296,18 +306,29 @@ export async function acceptBookingWithUtr(ref, utr, extra = {}) {
         paid_at: now,
         verified_by: user?.id ?? null
       };
-      if (isCash) {
-        updatePayload.payment_mode = 'cash';
+      if (finalMode) updatePayload.payment_mode = finalMode;
+      if (extraBooking.advance_amount !== undefined && extraBooking.advance_amount !== null) {
+        updatePayload.advance_amount = extraBooking.advance_amount;
       }
+      if (extraBooking.balance_amount !== undefined && extraBooking.balance_amount !== null) {
+        updatePayload.balance_amount = extraBooking.balance_amount;
+      }
+
       const { error: updErr } = await supabase
         .from('bookings')
         .update(updatePayload)
         .eq('ref', ref);
-      if (updErr && updErr.message && updErr.message.includes('payment_mode')) {
-        delete updatePayload.payment_mode;
+      if (updErr && updErr.message) {
+        // Retry with minimal payload if optional columns not yet migrated
         await supabase
           .from('bookings')
-          .update(updatePayload)
+          .update({
+            status: 'accepted',
+            payment_status: 'paid',
+            upi_utr: cleanUtr,
+            paid_at: now,
+            verified_by: user?.id ?? null
+          })
           .eq('ref', ref);
       }
     } catch (err) {

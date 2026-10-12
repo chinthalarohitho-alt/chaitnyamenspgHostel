@@ -242,6 +242,11 @@ export async function buildInvoicePdf(
   y -= 20;
 
   const isCash = b.payment_mode === "cash" || String(b.payment_mode || "").toLowerCase().includes("cash");
+  const isAdvance = b.payment_mode === "advance" || String(b.payment_mode || "").toLowerCase().includes("advance");
+  const advanceAmount = isAdvance
+    ? Math.min(moveInTotal, Number(b.advance_amount || p.advanceAmount || p.tokenAmount || 1000))
+    : 0;
+  const balanceAmount = isAdvance ? Math.max(0, moveInTotal - advanceAmount) : 0;
 
   const rows: Array<[string, string]> = [
     ["Room", b.room ?? "-"],
@@ -253,10 +258,14 @@ export async function buildInvoicePdf(
     rows.push(["Stay period covered", computedStayPeriod]);
   }
   rows.push(["Stay duration", b.duration ?? "-"]);
-  rows.push(["Payment Option", isCash ? "Cash on Hand (Pay at Hostel)" : "UPI / Online Transfer"]);
+  rows.push(["Payment Option", isCash ? "Cash on Hand (Pay at Hostel)" : (isAdvance ? "Advance Token (UPI)" : "UPI / Online Transfer")]);
   rows.push([rentLabel, rentValue]);
   rows.push(["Security Deposit", depositValue]);
   rows.push(["Total Move-In Charges", `Rs. ${moveInTotal.toLocaleString("en-IN")}`]);
+  if (isAdvance) {
+    rows.push(["Booking Advance Token", `Rs. ${advanceAmount.toLocaleString("en-IN")}`]);
+    rows.push(["Remaining Balance Due", `Rs. ${balanceAmount.toLocaleString("en-IN")}`]);
+  }
   for (const [k, v] of rows) {
     text(k, M, y, 10, reg, CHARCOAL);
     textR(v, A4.w - M, y, 10, bold, CHARCOAL);
@@ -267,18 +276,25 @@ export async function buildInvoicePdf(
 
   // ---------- token / payment box ----------
   y -= 12;
-  const amt = opts.tokenAmount && opts.tokenAmount > 0 ? opts.tokenAmount : moveInTotal;
+  const amt = isAdvance
+    ? advanceAmount
+    : (opts.tokenAmount && opts.tokenAmount > 0 ? opts.tokenAmount : moveInTotal);
+
   if (amt > 0) {
     page.drawRectangle({
       x: M, y: y - 52, width: A4.w - M * 2, height: 58,
       color: IVORY,
       borderColor: BORDER, borderWidth: 1,
     });
-    text(opts.paid ? (isCash ? "CASH ON HAND VERIFIED" : "MOVE-IN PAYMENT CONFIRMED") : (isCash ? "CASH ON HAND (PAY AT HOSTEL)" : "BOOKING CHARGES"), M + 16, y - 12, 8.5, bold, GOLD);
-    text(
-      opts.paid ? (isCash ? "Verified cash payment — thank you" : "Received & verified — thank you") : (isCash ? "Pay in cash upon arrival at hostel" : "Payable to confirm your room"),
-      M + 16, y - 28, 9.5, reg, SLATE,
-    );
+    const boxTitle = opts.paid
+      ? (isCash ? "CASH ON HAND VERIFIED" : (isAdvance ? "ADVANCE TOKEN CONFIRMED" : "MOVE-IN PAYMENT CONFIRMED"))
+      : (isCash ? "CASH ON HAND (PAY AT HOSTEL)" : (isAdvance ? "BOOKING ADVANCE TOKEN" : "BOOKING CHARGES"));
+    const boxSubtitle = opts.paid
+      ? (isCash ? "Verified cash payment — thank you" : (isAdvance ? `Advance verified — Bal Rs. ${balanceAmount.toLocaleString("en-IN")} due on move-in` : "Received & verified — thank you"))
+      : (isCash ? "Pay in cash upon arrival at hostel" : (isAdvance ? `Pay advance via UPI to hold bed — Bal Rs. ${balanceAmount.toLocaleString("en-IN")} on arrival` : "Payable to confirm your room"));
+
+    text(boxTitle, M + 16, y - 12, 8.5, bold, GOLD);
+    text(boxSubtitle, M + 16, y - 28, 9.5, reg, SLATE);
     textR(`Rs. ${amt.toLocaleString("en-IN")}`, A4.w - M - 16, y - 24, 19, bold, NAVY);
     y -= 74;
 
@@ -293,9 +309,13 @@ export async function buildInvoicePdf(
   const note = opts.paid
     ? (isCash
         ? "Cash payment verified by hostel management. Your bed is confirmed and held."
+        : isAdvance
+        ? `Advance token of Rs. ${advanceAmount.toLocaleString("en-IN")} verified against bank records. Your bed is held. Remaining balance of Rs. ${balanceAmount.toLocaleString("en-IN")} is payable upon move-in.`
         : "Payment verified against bank records. Your bed is confirmed and held.")
     : (isCash
         ? "This is a Cash on Hand booking enquiry. Move-in charges are payable upon arrival at the hostel. Until verification from the manager, this is not considered as paid."
+        : isAdvance
+        ? `This is an Advance Token booking enquiry. Settle Rs. ${advanceAmount.toLocaleString("en-IN")} advance via UPI to hold your room. Remaining balance of Rs. ${balanceAmount.toLocaleString("en-IN")} is payable upon arrival.`
         : "This is an enquiry, not a confirmed booking. Until verification from the manager against bank records, this is not considered as paid.");
   for (const line of wrap(note, reg, 9.5, A4.w - M * 2)) {
     text(line, M, y, 9.5, reg, SLATE);

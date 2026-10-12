@@ -267,6 +267,12 @@ export function calculateInvoicePricing(b = {}, p = {}) {
     isDaily ? durDays : durMonths
   );
 
+  const advanceAmount = Math.min(
+    finalMoveIn,
+    Number(b.advance_amount || b.advanceAmount || pricing.advanceAmount || pricing.tokenAmount || 1000)
+  );
+  const balanceDue = Math.max(0, finalMoveIn - advanceAmount);
+
   return {
     baseRent,
     acCost,
@@ -280,6 +286,8 @@ export function calculateInvoicePricing(b = {}, p = {}) {
     monthlyRent: finalMonthly,
     securityDeposit: finalDeposit,
     moveInTotal: finalMoveIn,
+    advanceAmount,
+    balanceDue,
     stayPeriod: stayPeriodInfo ? stayPeriodInfo.displayText : ''
   };
 }
@@ -412,8 +420,6 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   // If not verified/accepted by manager, payment is strictly NOT considered paid
   const amountPaidVal = isAccepted ? totalPayableVal : 0;
   const amountPaidStr = isAccepted ? totalPayableStr : 'Rs. 0';
-  const balanceDueVal = isAccepted ? 0 : totalPayableVal;
-  const balanceDueStr = isAccepted ? 'Rs. 0 (Fully Paid)' : totalPayableStr;
 
   page.drawRectangle({
     x: M,
@@ -443,8 +449,26 @@ export async function buildInvoicePdfDoc(b, h = {}) {
                  b.payment_method === 'Cash on Hand' ||
                  String(b.payment_mode || b.paymentMode || b.payment_method || '').toLowerCase().includes('cash');
 
+  const isAdvance = b.payment_mode === 'advance' ||
+                    b.paymentMode === 'advance' ||
+                    b.payment_method === 'advance' ||
+                    b.payment_method === 'Advance Token' ||
+                    String(b.payment_mode || b.paymentMode || b.payment_method || '').toLowerCase().includes('advance');
+
+  const totalPayableNum = totalPayableVal;
+  const advanceTokenNum = Math.min(
+    totalPayableNum,
+    parseInt(String(b.advance_amount || b.advanceAmount || calc.advanceAmount || 1000).replace(/[^\d]/g, ''), 10) || 1000
+  );
+  const balanceDueNum = isAdvance ? Math.max(0, totalPayableNum - advanceTokenNum) : (isAccepted ? 0 : totalPayableNum);
+  const advanceTokenStr = `Rs. ${advanceTokenNum.toLocaleString('en-IN')}`;
+  const balanceDueStr = isAdvance
+    ? `Rs. ${balanceDueNum.toLocaleString('en-IN')}`
+    : (isAccepted ? 'Rs. 0 (Fully Paid)' : totalPayableStr);
+
   text('PAYMENT MODE', M + colW * 2 + 10, curY - 6, 7.5, bold, SLATE);
-  text(isCash ? 'Cash on Hand' : 'UPI Instant Transfer', M + colW * 2 + 10, curY - 22, 10, bold, CHARCOAL);
+  const modeText = isCash ? 'Cash on Hand' : (isAdvance ? 'Advance Token' : 'UPI Full Payment');
+  text(modeText, M + colW * 2 + 10, curY - 22, 10, bold, CHARCOAL);
 
   text('TOTAL AMOUNT', M + colW * 3 + 10, curY - 6, 7.5, bold, SLATE);
   text(totalPayableStr, M + colW * 3 + 10, curY - 22, 11, bold, NAVY);
@@ -578,7 +602,42 @@ export async function buildInvoicePdfDoc(b, h = {}) {
     sub: b.move_in_scope || (calc.isDaily ? `${calc.durDays} days stay tariff (no deposit)` : (calc.durMonths > 1 ? `${calc.durMonths} months' rent + deposit` : "First month's rent + deposit")),
   });
 
-  if (isAccepted) {
+  if (isAdvance) {
+    if (isAccepted) {
+      tableRows.push({
+        label: 'Booking Advance Token Paid (UPI)',
+        val: `- ${advanceTokenStr}`,
+        highlight: DEEP_GREEN,
+        note: rawUtr ? `UTR: ${rawUtr} (Verified)` : 'Verified by Management',
+      });
+      tableRows.push({
+        label: 'Remaining Balance Due on Move-In',
+        val: balanceDueStr,
+        isTotal: true,
+        highlight: AMBER,
+        sub: 'Payable directly at the hostel upon arrival / check-in',
+      });
+    } else {
+      if (rawUtr) {
+        tableRows.push({
+          label: 'Submitted Payment Reference (UPI)',
+          val: `UTR: ${rawUtr}`,
+          note: 'Pending manager verification',
+        });
+      }
+      tableRows.push({
+        label: 'Booking Advance Token (Payable Now)',
+        val: advanceTokenStr,
+        note: 'Via UPI QR to reserve bed',
+      });
+      tableRows.push({
+        label: 'Balance Remaining on Move-In',
+        val: balanceDueStr,
+        isTotal: true,
+        sub: 'Payable on arrival. Until manager verification, advance is not considered paid.',
+      });
+    }
+  } else if (isAccepted) {
     tableRows.push({
       label: 'Total Move-In Paid via UPI',
       val: `- ${totalPayableStr}`,
@@ -631,7 +690,7 @@ export async function buildInvoicePdfDoc(b, h = {}) {
 
       text(r.label, M + 12, curY + 2, 10.5, bold, NAVY);
       if (r.sub) text(r.sub, M + 12, curY - 9, 7.5, reg, SLATE);
-      textR(r.val, A4.w - M - 12, curY - 2, 12, bold, isAccepted ? DEEP_GREEN : CRIMSON);
+      textR(r.val, A4.w - M - 12, curY - 2, 12, bold, r.highlight || (isAccepted ? DEEP_GREEN : CRIMSON));
 
       curY -= 26;
     } else {
@@ -660,29 +719,47 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   });
 
   if (isAccepted) {
-    text('TOTAL MOVE-IN PAYMENT VERIFIED & CONFIRMED', M + 16, curY - 12, 8.5, bold, DEEP_GREEN);
-    const noteText = isCash
-      ? 'Note: Cash payment verified and officially accepted by hostel management. Bed confirmed.'
-      : 'Note: Full move-in payment (Rent + Refundable Deposit) verified against bank records. Bed confirmed.';
-    text(noteText, M + 16, curY - 26, 8, obliq, SLATE);
-    const utrDisplay = isCash
-      ? 'Verified Mode: Cash on Hand (Received in Full)'
-      : (rawUtr ? `Verified Bank UTR: ${rawUtr}` : 'Verified by Hostel Management');
-    text(utrDisplay, M + 16, curY - 44, 9.5, bold, CHARCOAL);
-    textR(totalPayableStr, A4.w - M - 18, curY - 20, 18, bold, NAVY);
-    textR(`${totalPayableStr} — FULL PAYMENT`, A4.w - M - 18, curY - 40, 8.5, bold, DEEP_GREEN);
+    if (isAdvance) {
+      text('BOOKING ADVANCE VERIFIED & BED RESERVED', M + 16, curY - 12, 8.5, bold, DEEP_GREEN);
+      text(`Note: Advance Token of ${advanceTokenStr} verified against bank records. Balance ${balanceDueStr} payable on check-in.`, M + 16, curY - 26, 8, obliq, SLATE);
+      const utrDisplay = rawUtr ? `Verified Bank UTR: ${rawUtr}` : 'Verified by Hostel Management';
+      text(utrDisplay, M + 16, curY - 44, 9.5, bold, CHARCOAL);
+      textR(`${advanceTokenStr} PAID`, A4.w - M - 18, curY - 20, 15, bold, NAVY);
+      textR(`BAL DUE: ${balanceDueStr}`, A4.w - M - 18, curY - 40, 8.5, bold, DEEP_GREEN);
+    } else {
+      text('TOTAL MOVE-IN PAYMENT VERIFIED & CONFIRMED', M + 16, curY - 12, 8.5, bold, DEEP_GREEN);
+      const noteText = isCash
+        ? 'Note: Cash payment verified and officially accepted by hostel management. Bed confirmed.'
+        : 'Note: Full move-in payment (Rent + Refundable Deposit) verified against bank records. Bed confirmed.';
+      text(noteText, M + 16, curY - 26, 8, obliq, SLATE);
+      const utrDisplay = isCash
+        ? 'Verified Mode: Cash on Hand (Received in Full)'
+        : (rawUtr ? `Verified Bank UTR: ${rawUtr}` : 'Verified by Hostel Management');
+      text(utrDisplay, M + 16, curY - 44, 9.5, bold, CHARCOAL);
+      textR(totalPayableStr, A4.w - M - 18, curY - 20, 18, bold, NAVY);
+      textR(`${totalPayableStr} — FULL PAYMENT`, A4.w - M - 18, curY - 40, 8.5, bold, DEEP_GREEN);
+    }
   } else {
-    text(isCash ? 'PAYMENT STATUS: PENDING VERIFICATION (CASH ON HAND)' : 'PAYMENT STATUS: PENDING MANAGER VERIFICATION', M + 16, curY - 12, 8.5, bold, CRIMSON);
-    const noteText = isCash
-      ? 'Payable in cash directly to the hostel manager upon arrival / move-in.'
-      : 'IMPORTANT: Until verification from the manager, this is NOT considered as paid.';
-    text(noteText, M + 16, curY - 26, 8, bold, CHARCOAL);
-    const utrDisplay = isCash
-      ? 'Payment Option: Cash on Hand (Pay at Hostel upon Arrival)'
-      : (rawUtr ? `Submitted UPI Ref (UTR): ${rawUtr}` : 'UPI Ref (UTR): Pending Submission');
-    text(utrDisplay, M + 16, curY - 44, 9.5, bold, CHARCOAL);
-    textR(isCash ? 'CASH ON ARRIVAL' : 'STATUS: UNVERIFIED', A4.w - M - 18, curY - 20, isCash ? 10.5 : 13, bold, CRIMSON);
-    textR('NOT CONSIDERED AS PAID', A4.w - M - 18, curY - 38, 7.5, bold, CRIMSON);
+    if (isAdvance) {
+      text('PAYMENT STATUS: PENDING VERIFICATION (ADVANCE TOKEN)', M + 16, curY - 12, 8.5, bold, CRIMSON);
+      text(`IMPORTANT: Until verification from the manager, this advance is NOT considered as paid.`, M + 16, curY - 26, 8, bold, CHARCOAL);
+      const utrDisplay = rawUtr ? `Submitted UPI Ref (UTR): ${rawUtr}` : 'UPI Ref (UTR): Pending Submission';
+      text(utrDisplay, M + 16, curY - 44, 9.5, bold, CHARCOAL);
+      textR(`TOKEN: ${advanceTokenStr}`, A4.w - M - 18, curY - 20, 13, bold, CRIMSON);
+      textR(`BALANCE DUE: ${balanceDueStr}`, A4.w - M - 18, curY - 38, 7.5, bold, CRIMSON);
+    } else {
+      text(isCash ? 'PAYMENT STATUS: PENDING VERIFICATION (CASH ON HAND)' : 'PAYMENT STATUS: PENDING MANAGER VERIFICATION', M + 16, curY - 12, 8.5, bold, CRIMSON);
+      const noteText = isCash
+        ? 'Payable in cash directly to the hostel manager upon arrival / move-in.'
+        : 'IMPORTANT: Until verification from the manager, this is NOT considered as paid.';
+      text(noteText, M + 16, curY - 26, 8, bold, CHARCOAL);
+      const utrDisplay = isCash
+        ? 'Payment Option: Cash on Hand (Pay at Hostel upon Arrival)'
+        : (rawUtr ? `Submitted UPI Ref (UTR): ${rawUtr}` : 'UPI Ref (UTR): Pending Submission');
+      text(utrDisplay, M + 16, curY - 44, 9.5, bold, CHARCOAL);
+      textR(isCash ? 'CASH ON ARRIVAL' : 'STATUS: UNVERIFIED', A4.w - M - 18, curY - 20, isCash ? 10.5 : 13, bold, CRIMSON);
+      textR('NOT CONSIDERED AS PAID', A4.w - M - 18, curY - 38, 7.5, bold, CRIMSON);
+    }
   }
 
   curY -= 80;
@@ -696,10 +773,14 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   const validationNote = isAccepted
     ? (isCash
         ? '- Payment Validation: Verified cash payment received and officially recorded by hostel management.'
-        : '- Payment Validation: Verified and officially accepted by hostel management against bank credit records.')
+        : (isAdvance
+            ? `- Payment Validation: Advance token of ${advanceTokenStr} verified against bank records. Balance of ${balanceDueStr} due on check-in.`
+            : '- Payment Validation: Verified and officially accepted by hostel management against bank credit records.'))
     : (isCash
         ? '- CASH PAYMENT POLICY: Cash on Hand is payable directly to the hostel manager on your move-in date. Bed allocation is finalized upon payment and manager verification.'
-        : '- STRICT PAYMENT POLICY: Until verification from the hostel manager against bank records, this is NOT considered as paid. Bed allocation is finalized only upon manager approval.');
+        : (isAdvance
+            ? `- ADVANCE PAYMENT POLICY: Advance token of ${advanceTokenStr} holds your bed reservation. Until verification from the manager, this is not considered paid. Balance ${balanceDueStr} payable on arrival.`
+            : '- STRICT PAYMENT POLICY: Until verification from the hostel manager against bank records, this is NOT considered as paid. Bed allocation is finalized only upon manager approval.'));
 
   const notes = [
     validationNote,

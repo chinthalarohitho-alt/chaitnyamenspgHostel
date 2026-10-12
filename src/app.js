@@ -87,6 +87,7 @@ let confirmSteps = 3;
 let currentConfirmStep = 1;
 let tokenStepSettled = false;
 let activeUpiUri = '';
+let activeAdvanceUpiUri = '';
 
 function gotoConfirmStep(n) {
   const dialog = document.querySelector('#confirmationModal .confirm-dialog');
@@ -101,9 +102,14 @@ function gotoConfirmStep(n) {
     dot.classList.toggle('is-done', d < n);
   });
   dialog.scrollTop = 0;
-  if (n === 2 && activeUpiUri) {
-    const qrCanvas = document.getElementById('upiQr');
-    if (qrCanvas) renderQr(qrCanvas, activeUpiUri);
+  if (n === 2) {
+    if (currentBookingContext?.payment_mode === 'advance' && activeAdvanceUpiUri) {
+      const qrAdv = document.getElementById('upiQrAdvance');
+      if (qrAdv) renderQr(qrAdv, activeAdvanceUpiUri);
+    } else if (activeUpiUri) {
+      const qrCanvas = document.getElementById('upiQr');
+      if (qrCanvas) renderQr(qrCanvas, activeUpiUri);
+    }
   }
 }
 
@@ -134,7 +140,20 @@ function showUpiToken(ref) {
     amount = base + dep;
   }
 
+  // Advance amount calculations
+  const configuredAdvance = Number(cfg?.pricing?.advanceAmount) || 1000;
+  const advanceAmt = currentBookingContext?.advance_amount ? Number(currentBookingContext.advance_amount) : Math.min(amount, configuredAdvance);
+  const balanceAmt = currentBookingContext?.balance_amount !== undefined && currentBookingContext?.balance_amount !== null
+    ? Number(currentBookingContext.balance_amount)
+    : Math.max(0, amount - advanceAmt);
+
+  if (currentBookingContext) {
+    currentBookingContext.advance_amount = advanceAmt;
+    currentBookingContext.balance_amount = balanceAmt;
+  }
+
   const payBtn = document.getElementById('cstepToPay');
+  const advanceBtn = document.getElementById('cstepToAdvance');
 
   currentConfirmStep = 1;
   tokenStepSettled = false;
@@ -143,12 +162,14 @@ function showUpiToken(ref) {
     confirmSteps = 1;
     if (bar) bar.hidden = true;
     if (payBtn) payBtn.hidden = true;
+    if (advanceBtn) advanceBtn.hidden = true;
     return;
   }
 
   confirmSteps = 3;
   if (bar) bar.hidden = false;
   if (payBtn) payBtn.hidden = false;
+  if (advanceBtn) advanceBtn.hidden = false;
 
   const uri = buildUpiUri({
     vpa,
@@ -158,11 +179,29 @@ function showUpiToken(ref) {
     note: `Move-in payment ${ref}`
   });
 
+  const advanceUri = buildUpiUri({
+    vpa,
+    payeeName: cfg?.texts?.upiName || cfg?.texts?.hostelName,
+    amount: advanceAmt,
+    ref,
+    note: `Advance token ${ref}`
+  });
+
   const money = `₹${amount.toLocaleString('en-IN')}`;
+  const advanceMoney = `₹${advanceAmt.toLocaleString('en-IN')}`;
+  const balanceMoney = `₹${balanceAmt.toLocaleString('en-IN')}`;
+
   const amtEl = document.getElementById('upiAmount');
   if (amtEl) amtEl.textContent = money;
   const payAmt = document.getElementById('cstepPayAmt');
   if (payAmt) payAmt.textContent = money;
+  const advAmtEl = document.getElementById('cstepAdvanceAmt');
+  if (advAmtEl) advAmtEl.textContent = advanceMoney;
+  const advTokenDisp = document.getElementById('advanceTokenAmtDisp');
+  if (advTokenDisp) advTokenDisp.textContent = advanceMoney;
+  const advBalDisp = document.getElementById('advanceBalanceAmtDisp');
+  if (advBalDisp) advBalDisp.textContent = balanceMoney;
+
   const cashAmtDisp = document.getElementById('cashAmountDisp');
   if (cashAmtDisp) cashAmtDisp.textContent = money;
   const cashBtnAmt = document.getElementById('cashBtnAmt');
@@ -175,8 +214,15 @@ function showUpiToken(ref) {
   const openEl = document.getElementById('upiOpen');
   if (openEl) openEl.href = uri;
 
+  const vpaAdvEl = document.getElementById('upiVpaAdvance');
+  if (vpaAdvEl) vpaAdvEl.textContent = vpa;
+  const openAdvEl = document.getElementById('upiOpenAdvance');
+  if (openAdvEl) openAdvEl.href = advanceUri;
+
   activeUpiUri = uri;
+  activeAdvanceUpiUri = advanceUri;
   renderQr(document.getElementById('upiQr'), uri);
+  renderQr(document.getElementById('upiQrAdvance'), advanceUri);
 
   const input = document.getElementById('upiUtrInput');
   const btn = document.getElementById('upiUtrBtn');
@@ -189,7 +235,8 @@ function showUpiToken(ref) {
 
   // Set initial tab based on booking context preference
   const isCash = currentBookingContext?.payment_mode === 'cash';
-  switchConfirmPayTab(isCash ? 'cash' : 'upi');
+  const isAdvance = currentBookingContext?.payment_mode === 'advance';
+  switchConfirmPayTab(isCash ? 'cash' : (isAdvance ? 'advance' : 'upi'));
 
   // Ask for an email only if the form didn't collect one. Casual browsers
   // are never nagged; anyone paying a token gets a receipt.
@@ -205,45 +252,75 @@ function showUpiToken(ref) {
   }
 }
 
-/** Switch between UPI and Cash on Hand tabs in confirmation Step 2 */
+/** Switch between UPI, Advance Token, and Cash on Hand tabs in confirmation Step 2 */
 function switchConfirmPayTab(mode) {
   const isCash = mode === 'cash';
+  const isAdvance = mode === 'advance';
+  const isUpi = !isCash && !isAdvance;
+
   const tabUpi = document.getElementById('payTabUpi');
+  const tabAdvance = document.getElementById('payTabAdvance');
   const tabCash = document.getElementById('payTabCash');
   const panelUpi = document.getElementById('payPanelUpi');
+  const panelAdvance = document.getElementById('payPanelAdvance');
   const panelCash = document.getElementById('payPanelCash');
   const headTitle = document.getElementById('step2HeadTitle');
   const headSub = document.getElementById('step2HeadSub');
   const modalPaymentMode = document.getElementById('modalPaymentMode');
 
   if (tabUpi) {
-    tabUpi.classList.toggle('is-active', !isCash);
-    tabUpi.setAttribute('aria-selected', !isCash ? 'true' : 'false');
+    tabUpi.classList.toggle('is-active', isUpi);
+    tabUpi.setAttribute('aria-selected', isUpi ? 'true' : 'false');
+  }
+  if (tabAdvance) {
+    tabAdvance.classList.toggle('is-active', isAdvance);
+    tabAdvance.setAttribute('aria-selected', isAdvance ? 'true' : 'false');
   }
   if (tabCash) {
     tabCash.classList.toggle('is-active', isCash);
     tabCash.setAttribute('aria-selected', isCash ? 'true' : 'false');
   }
-  if (panelUpi) panelUpi.style.display = isCash ? 'none' : 'block';
+
+  if (panelUpi) panelUpi.style.display = isUpi ? 'block' : 'none';
+  if (panelAdvance) panelAdvance.style.display = isAdvance ? 'block' : 'none';
   if (panelCash) panelCash.style.display = isCash ? 'block' : 'none';
 
+  const fullAmt = document.getElementById('upiAmount')?.textContent || '₹13,900';
+  const advAmt = document.getElementById('advanceTokenAmtDisp')?.textContent || '₹1,000';
+  const balAmt = document.getElementById('advanceBalanceAmtDisp')?.textContent || '₹12,900';
+
   if (modalPaymentMode) {
-    modalPaymentMode.textContent = isCash ? 'Cash on Hand (Pay at Hostel)' : 'UPI Instant Transfer';
+    if (isCash) modalPaymentMode.textContent = 'Cash on Hand (Pay at Hostel)';
+    else if (isAdvance) modalPaymentMode.textContent = `Advance Token (${advAmt} Now + ${balAmt} on Arrival)`;
+    else modalPaymentMode.textContent = 'UPI Instant Transfer';
   }
 
   if (currentBookingContext) {
-    currentBookingContext.payment_mode = isCash ? 'cash' : 'upi';
-    currentBookingContext.paymentMode = isCash ? 'Cash on Hand' : 'UPI Instant Transfer';
+    currentBookingContext.payment_mode = isCash ? 'cash' : (isAdvance ? 'advance' : 'upi');
+    currentBookingContext.paymentMode = isCash ? 'Cash on Hand' : (isAdvance ? 'Advance Token' : 'UPI Instant Transfer');
   }
 
-  const amt = document.getElementById('upiAmount')?.textContent || '₹13,900';
   if (headTitle) {
-    headTitle.textContent = isCash ? 'Cash on Hand Payment' : 'Pay via UPI / QR Scan';
+    if (isCash) headTitle.textContent = 'Cash on Hand Payment';
+    else if (isAdvance) headTitle.textContent = 'Pay Booking Advance Token';
+    else headTitle.textContent = 'Pay via UPI / QR Scan';
   }
   if (headSub) {
-    headSub.innerHTML = isCash
-      ? `Pay <span class="upi-amount">${amt}</span> in cash directly to the hostel manager when moving in.`
-      : `Scan to pay <span class="upi-amount">${amt}</span> total move-in amount via UPI to confirm your room.`;
+    if (isCash) {
+      headSub.innerHTML = `Pay <span class="upi-amount">${fullAmt}</span> in cash directly to the hostel manager when moving in.`;
+    } else if (isAdvance) {
+      headSub.innerHTML = `Scan to pay <span class="upi-amount">${advAmt}</span> advance token via UPI now to reserve your bed. Remaining balance <span class="upi-amount">${balAmt}</span> payable upon arrival.`;
+    } else {
+      headSub.innerHTML = `Scan to pay <span class="upi-amount">${fullAmt}</span> total move-in amount via UPI to confirm your room.`;
+    }
+  }
+
+  if (isAdvance && activeAdvanceUpiUri) {
+    const qrAdv = document.getElementById('upiQrAdvance');
+    if (qrAdv) renderQr(qrAdv, activeAdvanceUpiUri);
+  } else if (isUpi && activeUpiUri) {
+    const qrCanvas = document.getElementById('upiQr');
+    if (qrCanvas) renderQr(qrCanvas, activeUpiUri);
   }
 }
 
@@ -258,14 +335,62 @@ function initConfirmSteps() {
     gotoConfirmStep(2);
   });
 
+  document.getElementById('cstepToAdvance')?.addEventListener('click', () => {
+    switchConfirmPayTab('advance');
+    gotoConfirmStep(2);
+  });
+
   document.getElementById('cstepToCash')?.addEventListener('click', () => {
     switchConfirmPayTab('cash');
     gotoConfirmStep(2);
   });
 
   document.getElementById('payTabUpi')?.addEventListener('click', () => switchConfirmPayTab('upi'));
+  document.getElementById('payTabAdvance')?.addEventListener('click', () => switchConfirmPayTab('advance'));
   document.getElementById('payTabCash')?.addEventListener('click', () => switchConfirmPayTab('cash'));
   document.getElementById('cstepCashToUpi')?.addEventListener('click', () => switchConfirmPayTab('upi'));
+  document.getElementById('cstepAdvanceToCash')?.addEventListener('click', () => switchConfirmPayTab('cash'));
+
+  document.getElementById('cstepAdvanceToUtr')?.addEventListener('click', async () => {
+    if (currentBookingContext) {
+      currentBookingContext.payment_mode = 'advance';
+      currentBookingContext.paymentMode = 'Advance Token';
+    }
+    const step3Title = document.getElementById('step3HeadTitle');
+    const step3Sub = document.getElementById('step3HeadSub');
+    const upiArea = document.getElementById('step3UpiArea');
+    const cashArea = document.getElementById('step3CashArea');
+
+    const advAmt = document.getElementById('advanceTokenAmtDisp')?.textContent || '₹1,000';
+    if (step3Title) step3Title.textContent = 'Confirm Advance Payment';
+    if (step3Sub) step3Sub.textContent = `Enter the 12-digit UPI reference for your ${advAmt} advance transfer.`;
+    if (upiArea) upiArea.style.display = 'block';
+    if (cashArea) cashArea.style.display = 'none';
+
+    const ask = document.getElementById('upiEmailAsk');
+    if (!ask || ask.hidden) { gotoConfirmStep(3); return; }
+
+    const field = document.getElementById('upiEmailInput');
+    const note = document.getElementById('upiEmailMsg');
+    const value = (field?.value || '').trim();
+    note.className = 'upi-msg';
+
+    if (!value) {
+      note.textContent = 'Add an email so we can send your invoice.';
+      note.classList.add('is-err');
+      field?.focus();
+      return;
+    }
+
+    const res = await setBookingEmail(ask.dataset.ref, value);
+    if (!res.ok) {
+      note.textContent = res.error;
+      note.classList.add(/does not look right/.test(res.error) ? 'is-err' : 'is-warn');
+      if (/does not look right/.test(res.error)) { field?.focus(); return; }
+    }
+    ask.hidden = true;
+    gotoConfirmStep(3);
+  });
 
   document.getElementById('cstepConfirmCash')?.addEventListener('click', () => {
     if (currentBookingContext) {
@@ -370,6 +495,15 @@ function initConfirmSteps() {
       btn.innerHTML = '<i class="fa-solid fa-check"></i>';
       setTimeout(() => { btn.innerHTML = '<i class="fa-solid fa-copy"></i>'; }, 1600);
     } catch { /* clipboard blocked — the id is on screen to type */ }
+  });
+
+  document.getElementById('upiCopyAdvance')?.addEventListener('click', async () => {
+    const btn = document.getElementById('upiCopyAdvance');
+    try {
+      await navigator.clipboard.writeText(document.getElementById('upiVpaAdvance').textContent);
+      btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+      setTimeout(() => { btn.innerHTML = '<i class="fa-solid fa-copy"></i>'; }, 1600);
+    } catch { /* clipboard blocked */ }
   });
 
   const btn = document.getElementById('upiUtrBtn');
@@ -508,7 +642,19 @@ function initConfirmSteps() {
       msg.textContent = res.error;
       msg.classList.add('is-warn');
     } else {
-      msg.innerHTML = '<span style="display:block;margin-bottom:4px;font-weight:600;">✓ UPI Reference recorded: <strong>' + check.value + '</strong></span><span style="display:block;color:#f59e0b;font-size:0.83rem;">⚠️ <strong>Important:</strong> Until verification from the hostel manager, this is <u>NOT considered as paid</u>.</span>';
+      const isAdvance = currentBookingContext?.payment_mode === 'advance';
+      const advMoney = currentBookingContext?.advance_amount
+        ? `₹${Number(currentBookingContext.advance_amount).toLocaleString('en-IN')}`
+        : (document.getElementById('advanceTokenAmtDisp')?.textContent || '₹1,000');
+      const balMoney = (currentBookingContext?.balance_amount !== undefined && currentBookingContext?.balance_amount !== null)
+        ? `₹${Number(currentBookingContext.balance_amount).toLocaleString('en-IN')}`
+        : (document.getElementById('advanceBalanceAmtDisp')?.textContent || '');
+
+      if (isAdvance) {
+        msg.innerHTML = `<span style="display:block;margin-bottom:4px;font-weight:600;">✓ Advance UPI Reference recorded: <strong>${check.value}</strong></span><span style="display:block;color:#f59e0b;font-size:0.83rem;">⚠️ <strong>Advance Token (${advMoney}):</strong> Pending manager verification. Remaining balance ${balMoney ? `<strong>${balMoney}</strong> ` : ''}payable upon arrival.</span>`;
+      } else {
+        msg.innerHTML = '<span style="display:block;margin-bottom:4px;font-weight:600;">✓ UPI Reference recorded: <strong>' + check.value + '</strong></span><span style="display:block;color:#f59e0b;font-size:0.83rem;">⚠️ <strong>Important:</strong> Until verification from the hostel manager, this is <u>NOT considered as paid</u>.</span>';
+      }
       msg.classList.add('is-ok');
     }
 
@@ -548,7 +694,15 @@ function initConfirmSteps() {
     // Update WhatsApp link with UTR
     const waBtn2 = document.getElementById('modalWhatsAppBtn2');
     if (waBtn2 && currentBookingContext) {
+      const isAdv = currentBookingContext.payment_mode === 'advance';
       const payDisplay = currentBookingContext.payable_move_in || '13,900';
+      const advStr = currentBookingContext.advance_amount
+        ? `₹${Number(currentBookingContext.advance_amount).toLocaleString('en-IN')}`
+        : '₹1,000';
+      const balStr = (currentBookingContext.balance_amount !== undefined && currentBookingContext.balance_amount !== null)
+        ? `₹${Number(currentBookingContext.balance_amount).toLocaleString('en-IN')}`
+        : '';
+
       const waText = encodeURIComponent(
         `Hello Manager, I submitted a booking enquiry on the Chaitanya Mens PG & Hostel website!\n\n` +
         `📋 Ref Code: ${currentBookingContext.ref}\n` +
@@ -559,8 +713,13 @@ function initConfirmSteps() {
         `📅 Move-in Date: ${currentBookingContext.date}\n` +
         (currentBookingContext.stay_period ? `🗓️ Stay Period: ${currentBookingContext.stay_period}\n` : '') +
         `⏳ Stay Duration: ${currentBookingContext.duration}\n` +
-        `💳 Amount Submitted: ${payDisplay} (Pending manager verification — not considered paid until verified)\n` +
-        `🔢 UPI Ref (UTR): ${check.value}\n\n` +
+        (isAdv
+          ? `💳 Payment Mode: Advance Token\n` +
+            `💰 Advance Paid: ${advStr} (Pending manager verification)\n` +
+            `💵 Balance Due on Move-In: ${balStr}\n` +
+            `🔢 UPI Ref (UTR): ${check.value}\n\n`
+          : `💳 Amount Submitted: ${payDisplay} (Pending manager verification — not considered paid until verified)\n` +
+            `🔢 UPI Ref (UTR): ${check.value}\n\n`) +
         `Please verify the payment against bank records and confirm bed allocation.`
       );
       const mgrWa = (getHostelConfig()?.texts?.whatsapp || '919949785344').replace(/\D/g, '');
@@ -726,6 +885,7 @@ const DEFAULT_HOSTEL_CONFIG = {
     disc12m: 15,
     securityDeposit: 5400,
     tokenAmount: 500,
+    advanceAmount: 1000,
     dailyRate: 350,
     dailyAcAdd: 100
   },
@@ -915,6 +1075,12 @@ function applyHostelConfigToSite(cfg) {
   const durDailyBadge = document.getElementById('durDailyBadge');
   if (durDailyBadge) {
     durDailyBadge.textContent = `₹${Number(p.dailyRate ?? 350).toLocaleString('en-IN')}/day`;
+  }
+
+  // Booking form advance token display
+  const dispFormAdvanceVal = document.getElementById('dispFormAdvanceVal');
+  if (dispFormAdvanceVal) {
+    dispFormAdvanceVal.textContent = Number(p.advanceAmount || 1000).toLocaleString('en-IN');
   }
 
   // Trigger recalculation if room calculator is initialized
@@ -1840,6 +2006,7 @@ function initWardenPortal() {
     setVal('cfgDisc6m', cfg.pricing.disc6m);
     setVal('cfgDisc12m', cfg.pricing.disc12m);
     setVal('cfgSecurityDeposit', (cfg.pricing.securityDeposit !== undefined && cfg.pricing.securityDeposit !== null) ? cfg.pricing.securityDeposit : 5400);
+    setVal('cfgAdvanceAmount', (cfg.pricing.advanceAmount !== undefined && cfg.pricing.advanceAmount !== null) ? cfg.pricing.advanceAmount : 1000);
     setVal('cfgDailyRate', cfg.pricing.dailyRate ?? 350);
     setVal('cfgDailyAcAdd', cfg.pricing.dailyAcAdd ?? 100);
     if (document.getElementById('cfgTokenAmount')) setVal('cfgTokenAmount', cfg.pricing.tokenAmount || 500);
@@ -1984,6 +2151,7 @@ function initWardenPortal() {
           disc6m: getNum('cfgDisc6m', 10),
           disc12m: getNum('cfgDisc12m', 15),
           securityDeposit: getNum('cfgSecurityDeposit', 5400),
+          advanceAmount: getNum('cfgAdvanceAmount', 1000),
           dailyRate: getNum('cfgDailyRate', 350),
           dailyAcAdd: getNum('cfgDailyAcAdd', 100)
         },
@@ -2055,6 +2223,7 @@ function initWardenPortal() {
         ['cfgDoubleBase', '2 sharing rent'], ['cfgTripleBase', '3 sharing rent'],
         ['cfgFourBase', '4 sharing rent'],   ['cfgFiveBase', '5 sharing rent'],
         ['cfgSecurityDeposit', 'Security deposit'],
+        ['cfgAdvanceAmount', 'Booking advance token'],
         ['cfgDailyRate', 'Daily stay base rent'], ['cfgDailyAcAdd', 'Daily stay AC charge'],
       ]) {
         const el = document.getElementById(id);
@@ -2685,6 +2854,13 @@ function renderEnquiriesTable() {
         const depositVal = `₹${calc.securityDeposit.toLocaleString('en-IN')}`;
         const monthlyVal = `₹${calc.monthlyRent.toLocaleString('en-IN')}`;
 
+        const isAdvance = b.payment_mode === 'advance' ||
+                          b.paymentMode === 'advance' ||
+                          b.paymentMode === 'Advance Token' ||
+                          String(b.payment_mode || b.paymentMode || '').toLowerCase().includes('advance');
+        const advanceAmt = isAdvance ? (b.advance_amount || calc.advanceAmount) : null;
+        const balanceAmt = isAdvance ? (b.balance_amount !== undefined && b.balance_amount !== null ? b.balance_amount : calc.balanceDue) : null;
+
         try {
           await acceptBookingWithUtr(b.ref, isCash ? null : utr, {
             email: b.email,
@@ -2693,8 +2869,10 @@ function renderEnquiriesTable() {
               status: 'accepted',
               paymentStatus: 'paid',
               payment_status: 'paid',
-              payment_mode: isCash ? 'cash' : (b.payment_mode || 'upi'),
-              paymentMode: isCash ? 'Cash on Hand' : (b.paymentMode || 'UPI Instant Transfer'),
+              payment_mode: isCash ? 'cash' : (isAdvance ? 'advance' : (b.payment_mode || 'upi')),
+              paymentMode: isCash ? 'Cash on Hand' : (isAdvance ? 'Advance Token' : (b.paymentMode || 'UPI Instant Transfer')),
+              advance_amount: advanceAmt,
+              balance_amount: balanceAmt,
               isVerified: true,
               upi_utr: isCash ? null : utr,
               utr: isCash ? null : utr,
@@ -2713,7 +2891,7 @@ function renderEnquiriesTable() {
           delete activeUtrValues[ref];
           showSiteToast(
             'Booking Accepted & Verified',
-            `Booking ${b.ref} confirmed (${isCash ? 'Cash on Hand' : 'UPI'}). Official invoice emailed to ${b.email || 'resident'}.`,
+            `Booking ${b.ref} confirmed (${isCash ? 'Cash on Hand' : (isAdvance ? 'Advance Token' : 'UPI')}). Official invoice emailed to ${b.email || 'resident'}.`,
             'fa-solid fa-circle-check'
           );
           await refreshBookings();
@@ -2899,6 +3077,16 @@ function renderEnquiriesTable() {
                    b.paymentMode === 'cash' ||
                    b.paymentMode === 'Cash on Hand' ||
                    String(b.payment_mode || b.paymentMode || '').toLowerCase().includes('cash');
+    const isAdvance = b.payment_mode === 'advance' ||
+                      b.paymentMode === 'advance' ||
+                      b.paymentMode === 'Advance Token' ||
+                      String(b.payment_mode || b.paymentMode || '').toLowerCase().includes('advance');
+    const advVal = b.advance_amount
+      ? `₹${Number(b.advance_amount).toLocaleString('en-IN')}`
+      : `₹${(Number(getHostelConfig()?.pricing?.advanceAmount) || 1000).toLocaleString('en-IN')}`;
+    const balVal = (b.balance_amount !== undefined && b.balance_amount !== null)
+      ? `₹${Number(b.balance_amount).toLocaleString('en-IN')}`
+      : '';
     const utrStr = (b.utr || b.upi_utr || '').trim();
     const cleanPhone = (b.phone || '').replace(/\D/g, '');
     const payableAmt = b.payable_move_in || (b.paymentAmount ? `₹${Number(b.paymentAmount).toLocaleString('en-IN')}` : '₹13,900');
@@ -2983,6 +3171,21 @@ function renderEnquiriesTable() {
                       <span class="enq-pill-lbl">Payment Mode:</span>
                       <span class="enq-pill-val highlight"><i class="fa-solid fa-money-bill-wave"></i> Cash on Hand</span>
                     </div>
+                  ` : isAdvance ? `
+                    <div class="enq-pill">
+                      <span class="enq-pill-lbl">Payment Mode:</span>
+                      <span class="enq-pill-val highlight"><i class="fa-solid fa-hand-holding-dollar"></i> Advance Token (${advVal})</span>
+                    </div>
+                    ${balVal ? `
+                      <div class="enq-pill">
+                        <span class="enq-pill-lbl">Balance on Move-In:</span>
+                        <span class="enq-pill-val highlight" style="color:#f59e0b;">${balVal}</span>
+                      </div>
+                    ` : ''}
+                    <div class="enq-pill">
+                      <span class="enq-pill-lbl">Advance UTR:</span>
+                      ${repCleanUtr ? `<span class="enq-pill-val text-green"><i class="fa-solid fa-check"></i> ${escapeHtml(repCleanUtr)}</span>` : `<span class="enq-pill-val" style="color:#94a3b8;font-style:italic;">Not reported</span>`}
+                    </div>
                   ` : `
                     <div class="enq-pill">
                       <span class="enq-pill-lbl">Applicant UTR:</span>
@@ -3003,8 +3206,8 @@ function renderEnquiriesTable() {
                 ` : `
                   <div class="enq-inline-input-area">
                     <label class="enq-inline-label" for="inlineUtr-${b.ref}">
-                      <strong>Bank Transaction Reference (UTR)</strong>
-                      <span>Match with bank credit alert before accepting</span>
+                      <strong>${isAdvance ? `Bank Transaction Reference (UTR) for ${advVal} Advance Token` : 'Bank Transaction Reference (UTR)'}</strong>
+                      <span>${isAdvance ? 'Match with bank credit alert for the advance token before accepting' : 'Match with bank credit alert before accepting'}</span>
                     </label>
                     <div class="enq-inline-input-row">
                       <input
@@ -3145,6 +3348,12 @@ function renderEnquiriesTable() {
           ${isCash ? `
             <div style="margin-top:4px;">
               <span class="table-cash-badge"><i class="fa-solid fa-money-bill-wave"></i> Cash on Hand</span>
+            </div>
+          ` : isAdvance ? `
+            <div style="margin-top:4px;">
+              <span class="table-advance-badge"><i class="fa-solid fa-hand-holding-dollar"></i> Advance: ${advVal}</span>
+              ${balVal ? `<br><small style="color:#f59e0b; font-size:0.72rem; font-weight:600;">Bal Due: ${balVal}</small>` : ''}
+              ${utrStr ? `<br><small style="color:#10b981; font-family:var(--font-mono, monospace); font-weight:700;"><i class="fa-solid fa-receipt"></i> ${escapeHtml(utrStr)}</small>` : `<br><small style="color:var(--text-muted); font-style:italic;">UTR: Pending</small>`}
             </div>
           ` : (utrStr ? `
             <div style="margin-top:2px;">
@@ -4836,6 +5045,11 @@ function initBookingForm() {
 
     const chosenPayMode = document.querySelector('input[name="bookingPaymentMode"]:checked')?.value || 'upi';
     const isCashSelected = chosenPayMode === 'cash';
+    const isAdvanceSelected = chosenPayMode === 'advance';
+
+    const cfgAdvanceVal = cfg?.pricing?.advanceAmount ? Number(cfg.pricing.advanceAmount) : (cfg?.pricing?.tokenAmount ? Number(cfg.pricing.tokenAmount) : 1000);
+    const calcAdvanceAmt = Math.min(moveInTotalNum, cfgAdvanceVal || 1000);
+    const calcBalanceAmt = Math.max(0, moveInTotalNum - calcAdvanceAmt);
 
     const newBooking = {
       ref: refId,
@@ -4855,7 +5069,9 @@ function initBookingForm() {
       id_number: idCheck.value || guestIdNumber?.value?.trim() || '',
       id_proof_url: currentIdProof?.dataUrl || '',
       payment_mode: chosenPayMode,
-      paymentMode: isCashSelected ? 'Cash on Hand' : 'UPI Instant Transfer',
+      paymentMode: isCashSelected ? 'Cash on Hand' : (isAdvanceSelected ? 'Advance Token' : 'UPI Instant Transfer'),
+      advance_amount: isAdvanceSelected ? calcAdvanceAmt : null,
+      balance_amount: isAdvanceSelected ? calcBalanceAmt : null,
       monthly_rent: monthlyTotalStr,
       term_savings: document.getElementById('dispDiscountVal')?.textContent || '',
       security_deposit: secDepositStr,
@@ -4869,10 +5085,12 @@ function initBookingForm() {
 
     currentBookingContext = {
       ...newBooking,
-      token_amount: moveInTotalNum,
+      token_amount: isAdvanceSelected ? calcAdvanceAmt : moveInTotalNum,
       deposit_amount: secDepositNum,
+      advance_amount: isAdvanceSelected ? calcAdvanceAmt : null,
+      balance_amount: isAdvanceSelected ? calcBalanceAmt : null,
       payment_mode: chosenPayMode,
-      paymentMode: isCashSelected ? 'Cash on Hand' : 'UPI Instant Transfer',
+      paymentMode: isCashSelected ? 'Cash on Hand' : (isAdvanceSelected ? 'Advance Token' : 'UPI Instant Transfer'),
       upi_utr: '',
       dateIssued: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
     };
@@ -4909,7 +5127,13 @@ function initBookingForm() {
     if (modalStayPeriod) modalStayPeriod.textContent = stayPeriodDisplay;
     const modalPaymentMode = document.getElementById('modalPaymentMode');
     if (modalPaymentMode) {
-      modalPaymentMode.textContent = isCashSelected ? 'Cash on Hand (Pay at Hostel)' : 'UPI Instant Transfer';
+      if (isCashSelected) {
+        modalPaymentMode.textContent = 'Cash on Hand (Pay at Hostel)';
+      } else if (isAdvanceSelected) {
+        modalPaymentMode.textContent = `Advance Token (₹${calcAdvanceAmt.toLocaleString('en-IN')} Now + Balance ₹${calcBalanceAmt.toLocaleString('en-IN')})`;
+      } else {
+        modalPaymentMode.textContent = 'UPI Instant Transfer';
+      }
     }
     const modalIdProof = document.getElementById('modalIdProof');
     if (modalIdProof) {
@@ -4922,6 +5146,10 @@ function initBookingForm() {
     if (modalMoveInTotal) modalMoveInTotal.textContent = moveInTotalStr;
 
     // 5. Generate WhatsApp Link for Manager
+    let payMethodText = 'UPI / Online Transfer (Full Move-in)';
+    if (isCashSelected) payMethodText = 'Cash on Hand (Pay upon arrival)';
+    else if (isAdvanceSelected) payMethodText = `Advance Token (₹${calcAdvanceAmt.toLocaleString('en-IN')} UPI Advance + Balance ₹${calcBalanceAmt.toLocaleString('en-IN')} on Move-in)`;
+
     const waText = encodeURIComponent(
       `Hello Manager, I submitted a booking enquiry on the Chaitanya Mens PG & Hostel website!\n\n` +
       `📋 Ref Code: ${refId}\n` +
@@ -4933,7 +5161,7 @@ function initBookingForm() {
       `📅 Move-in Date: ${chosenMoveInDate}\n` +
       `🗓️ Stay Period: ${stayPeriodDisplay}\n` +
       `⏳ Stay Duration: ${sel.duration}\n` +
-      `💵 Payment Option: ${isCashSelected ? 'Cash on Hand (Pay upon arrival)' : 'UPI / Online Transfer'}\n\n` +
+      `💵 Payment Option: ${payMethodText}\n\n` +
       `Please confirm bed availability and share room photos.`
     );
     const mgrWa = (cfg?.texts?.whatsapp || '919949785344').replace(/\D/g, '');

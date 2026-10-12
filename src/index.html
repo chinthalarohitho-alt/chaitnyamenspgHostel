@@ -960,9 +960,20 @@
                         <div class="pm-content">
                           <div class="pm-top">
                             <i class="fa-solid fa-qrcode"></i>
-                            <strong>UPI / Online Transfer</strong>
+                            <strong>Full Move-in (UPI)</strong>
                           </div>
-                          <span>Instant digital transfer via QR / UPI</span>
+                          <span>Pay full move-in amount online via UPI / QR</span>
+                        </div>
+                        <i class="fa-solid fa-circle-check pm-check"></i>
+                      </label>
+                      <label class="pay-method-card" id="payMethodCardAdvance">
+                        <input type="radio" name="bookingPaymentMode" value="advance">
+                        <div class="pm-content">
+                          <div class="pm-top">
+                            <i class="fa-solid fa-hand-holding-dollar"></i>
+                            <strong>Advance Token</strong>
+                          </div>
+                          <span>Pay ₹<span id="dispFormAdvanceVal">1,000</span> token to lock bed, rest on arrival</span>
                         </div>
                         <i class="fa-solid fa-circle-check pm-check"></i>
                       </label>
@@ -973,7 +984,7 @@
                             <i class="fa-solid fa-money-bill-wave"></i>
                             <strong>Cash on Hand</strong>
                           </div>
-                          <span>Pay in cash directly to manager upon arrival</span>
+                          <span>Pay entire amount in cash upon arrival</span>
                         </div>
                         <i class="fa-solid fa-circle-check pm-check"></i>
                       </label>
@@ -1471,10 +1482,14 @@
           </dl>
 
           <div class="cstep-actions cstep-actions-row">
-            <button type="button" class="cstep-next" id="cstepToPay" title="Pay Online via UPI">
+            <button type="button" class="cstep-next" id="cstepToPay" title="Pay Full Move-in via UPI">
               <i class="fa-solid fa-qrcode"></i>
-              <span>Pay via UPI (<strong id="cstepPayAmt">₹13,900</strong>)</span>
+              <span>Full UPI (<strong id="cstepPayAmt">₹13,900</strong>)</span>
               <i class="fa-solid fa-arrow-right"></i>
+            </button>
+            <button type="button" class="cstep-advance-btn" id="cstepToAdvance" title="Pay Advance Token via UPI">
+              <i class="fa-solid fa-hand-holding-dollar"></i>
+              <span>Advance (<strong id="cstepAdvanceAmt">₹1,000</strong>)</span>
             </button>
             <button type="button" class="cstep-cash-btn" id="cstepToCash" title="Pay Cash on Hand">
               <i class="fa-solid fa-money-bill-wave"></i>
@@ -1500,7 +1515,11 @@
           <div class="pay-mode-tabs" id="payModeTabs" role="tablist">
             <button type="button" class="pay-mode-tab is-active" id="payTabUpi" data-mode="upi" role="tab" aria-selected="true">
               <i class="fa-solid fa-qrcode"></i>
-              <span>UPI / QR Scan</span>
+              <span>Full UPI</span>
+            </button>
+            <button type="button" class="pay-mode-tab" id="payTabAdvance" data-mode="advance" role="tab" aria-selected="false">
+              <i class="fa-solid fa-hand-holding-dollar"></i>
+              <span>Advance Token</span>
             </button>
             <button type="button" class="pay-mode-tab" id="payTabCash" data-mode="cash" role="tab" aria-selected="false">
               <i class="fa-solid fa-money-bill-wave"></i>
@@ -1508,7 +1527,7 @@
             </button>
           </div>
 
-          <!-- 1. UPI Mode Panel -->
+          <!-- 1. Full UPI Mode Panel -->
           <div class="pay-panel-wrap" id="payPanelUpi">
             <div class="upi-qr-wrap">
               <canvas id="upiQr" width="208" height="208" aria-label="UPI QR code"></canvas>
@@ -1542,7 +1561,47 @@
             </div>
           </div>
 
-          <!-- 2. Cash on Hand Panel -->
+          <!-- 2. Advance Token Mode Panel -->
+          <div class="pay-panel-wrap" id="payPanelAdvance" style="display: none;">
+            <div class="advance-pay-card">
+              <div class="advance-breakdown-grid">
+                <div class="advance-breakdown-box advance-box-token">
+                  <span class="advance-box-lbl">Advance Token Now</span>
+                  <span class="advance-box-amount" id="advanceTokenAmtDisp">₹1,000</span>
+                  <span class="advance-box-sub">Via UPI QR to lock bed</span>
+                </div>
+                <div class="advance-breakdown-box advance-box-balance">
+                  <span class="advance-box-lbl">Balance on Move-In</span>
+                  <span class="advance-box-amount" id="advanceBalanceAmtDisp">₹12,900</span>
+                  <span class="advance-box-sub">Payable upon arrival</span>
+                </div>
+              </div>
+
+              <div class="upi-qr-wrap">
+                <canvas id="upiQrAdvance" width="208" height="208" aria-label="UPI Advance QR code"></canvas>
+                <div class="upi-vpa">
+                  <span>UPI ID</span>
+                  <code id="upiVpaAdvance">—</code>
+                  <button type="button" class="upi-copy" id="upiCopyAdvance" aria-label="Copy UPI ID">
+                    <i class="fa-solid fa-copy"></i>
+                  </button>
+                </div>
+              </div>
+
+              <a href="#" class="upi-open" id="upiOpenAdvance">
+                <i class="fa-solid fa-mobile-screen"></i> Open UPI App (Pay Advance)
+              </a>
+
+              <div class="cstep-actions" style="margin-top: 18px;">
+                <button type="button" class="cstep-next" id="cstepAdvanceToUtr">
+                  I've paid Advance Token <i class="fa-solid fa-arrow-right"></i>
+                </button>
+                <button type="button" class="cstep-skip" id="cstepAdvanceToCash">Switch to Cash on Hand</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Cash on Hand Panel -->
           <div class="pay-panel-wrap" id="payPanelCash" style="display: none;">
             <div class="cash-pay-card">
               <div class="cash-pay-header">
@@ -1984,6 +2043,14 @@
                     <span>₹</span>
                   </div>
                   <small class="mgr-field-hint">Refundable security deposit collected on move-in.</small>
+                </div>
+                <div class="mgr-input-group">
+                  <label for="cfgAdvanceAmount">Booking Advance Token (₹)</label>
+                  <div class="mgr-percent-wrap">
+                    <input type="number" id="cfgAdvanceAmount" class="mgr-input" value="1000" min="100" max="25000" step="100">
+                    <span>₹</span>
+                  </div>
+                  <small class="mgr-field-hint">Token deposit for guests selecting Advance Payment to hold a bed.</small>
                 </div>
               </div>
             </div>

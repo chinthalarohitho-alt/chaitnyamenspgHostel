@@ -11772,7 +11772,7 @@ select:autofill {
 /* Modal Payment Tabs in Step 2 */
 .pay-mode-tabs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 8px;
   margin-bottom: 20px;
   background: rgba(255, 255, 255, 0.05);
@@ -11812,6 +11812,31 @@ select:autofill {
   color: #111827;
   box-shadow: 0 4px 12px rgba(201, 164, 92, 0.35);
   font-weight: 700;
+}
+
+/* Advance Token Button in Step 1 */
+.cstep-advance-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 18px;
+  border-radius: 12px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1.5px solid #38bdf8;
+  color: #38bdf8;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.cstep-advance-btn:hover {
+  background: #38bdf8;
+  color: #0f172a;
+  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.3);
+  transform: translateY(-1px);
 }
 
 /* Cash Button in Step 1 */
@@ -12011,4 +12036,75 @@ select:autofill {
   color: #facc15;
   font-size: 0.75rem;
   font-weight: 700;
+}
+
+.table-advance-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 5px;
+  color: #38bdf8;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Advance Token Card in Step 2 */
+.advance-pay-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.advance-breakdown-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.advance-breakdown-box {
+  background: #11141a;
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-align: center;
+}
+
+.advance-box-token {
+  border: 1.5px solid rgba(56, 189, 248, 0.4);
+}
+
+.advance-box-balance {
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+}
+
+.advance-box-lbl {
+  display: block;
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.advance-box-amount {
+  display: block;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #38bdf8;
+  font-family: var(--font-heading), system-ui, sans-serif;
+}
+
+.advance-box-balance .advance-box-amount {
+  color: #f59e0b;
+}
+
+.advance-box-sub {
+  display: block;
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
 }
