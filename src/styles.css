@@ -7608,6 +7608,36 @@ select.rsv-input,
   transform: translateY(0);
 }
 
+#confirmationModal .cstep-invoice-disclaimer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 9px;
+  color: #f59e0b;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+#confirmationModal .cstep-invoice-disclaimer i {
+  color: #f59e0b;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+}
+
+#confirmationModal .cstep-invoice-disclaimer strong {
+  color: #fbbf24;
+}
+
+#confirmationModal .cstep-invoice-disclaimer u {
+  text-decoration-color: #f59e0b;
+}
+
 /* ===================================================================
    CUSTOM SELECT
    The native element stays in the DOM (value + form submission) but is
@@ -8170,12 +8200,12 @@ select.rsv-input,
   margin-top: 20px;
 }
 
-/* Step 1 Actions: One-Line 3-Button Row */
+/* Step 1 Actions: One-Line 2-Button Row (Pay + WhatsApp) */
 #confirmationModal .cstep[data-step="1"] .cstep-actions,
 #confirmationModal .cstep-actions-row {
   display: grid;
-  grid-template-columns: 1.35fr 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 10px;
   align-items: stretch;
   margin-top: 14px;
 }
@@ -8537,20 +8567,19 @@ select.rsv-input,
   #confirmationModal .cstep-actions.cstep-actions-row,
   #confirmationModal .cstep-actions-row {
     display: grid !important;
-    grid-template-columns: 1.35fr 1fr 1fr !important;
+    grid-template-columns: 1.4fr 1fr !important;
     flex-direction: row !important;
-    gap: 5px !important;
-    margin-top: 6px !important;
+    gap: 8px !important;
+    margin-top: 8px !important;
   }
 
   #confirmationModal .cstep-actions-row .cstep-next,
-  #confirmationModal .cstep-actions-row .confirm-download-invoice,
   #confirmationModal .cstep-actions-row .confirm-wa {
     height: 38px !important;
     min-height: 38px !important;
     max-height: 38px !important;
-    padding: 0 5px !important;
-    font-size: 0.76rem !important;
+    padding: 0 8px !important;
+    font-size: 0.82rem !important;
     border-radius: 8px !important;
   }
 

@@ -283,6 +283,10 @@ function initConfirmSteps() {
         name: gName,
         phone: gPhone,
         email: guestEmailVal,
+        status: 'pending',
+        payment_status: 'unpaid',
+        paymentStatus: 'unpaid',
+        isVerified: false,
         room: document.getElementById('modalRoom')?.textContent || '2 Sharing',
         climate: document.getElementById('modalClimate')?.textContent || 'Non-AC',
         floor: document.getElementById('preferredFloor')?.value || '1st Floor',
@@ -379,7 +383,7 @@ function initConfirmSteps() {
       msg.textContent = res.error;
       msg.classList.add('is-warn');
     } else {
-      msg.textContent = 'Reference recorded. Note: Payment is not yet validated and will be verified by the manager before you move in.';
+      msg.innerHTML = '<span style="display:block;margin-bottom:4px;font-weight:600;">✓ UPI Reference recorded: <strong>' + check.value + '</strong></span><span style="display:block;color:#f59e0b;font-size:0.83rem;">⚠️ <strong>Important:</strong> Until verification from the hostel manager, this is <u>NOT considered as paid</u>.</span>';
       msg.classList.add('is-ok');
     }
 
@@ -410,7 +414,7 @@ function initConfirmSteps() {
         hostel: hostelInfo
       }).then(mailRes => {
         if (mailRes?.ok) {
-          showSiteToast('Invoice Dispatched', 'PDF invoice sent to your email. Payment will be validated before move-in.', 'fa-solid fa-envelope-circle-check');
+          showSiteToast('Invoice Dispatched', 'PDF invoice sent to your email. (Note: Not considered paid until verified by manager).', 'fa-solid fa-envelope-circle-check');
         }
       });
     }
@@ -428,9 +432,9 @@ function initConfirmSteps() {
         `🏢 Preferred Floor: ${currentBookingContext.floor}\n` +
         `📅 Move-in Date: ${currentBookingContext.date}\n` +
         `⏳ Stay Duration: ${currentBookingContext.duration}\n` +
-        `💳 Amount Submitted: ${payDisplay} (Pending move-in validation)\n` +
+        `💳 Amount Submitted: ${payDisplay} (Pending manager verification — not considered paid until verified)\n` +
         `🔢 UPI Ref (UTR): ${check.value}\n\n` +
-        `Please confirm receipt and bed allocation before move-in.`
+        `Please verify the payment against bank records and confirm bed allocation.`
       );
       waBtn2.href = `https://wa.me/919949785344?text=${waText}`;
     }

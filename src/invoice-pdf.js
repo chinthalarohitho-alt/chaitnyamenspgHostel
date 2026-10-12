@@ -16,6 +16,9 @@ const GREEN_TINT = rgb(0.941, 0.988, 0.965); // Soft green-ivory tint
 const GREEN_BD   = rgb(0.655, 0.867, 0.776); // Soft green border
 const AMBER_TINT = rgb(0.996, 0.980, 0.941); // Soft amber-ivory tint
 const AMBER_BD   = rgb(0.933, 0.820, 0.651); // Soft amber border
+const CRIMSON      = rgb(0.850, 0.200, 0.200); // Alert red
+const CRIMSON_TINT = rgb(0.995, 0.960, 0.960); // Soft crimson-ivory tint
+const CRIMSON_BD   = rgb(0.920, 0.680, 0.680); // Soft crimson border
 
 const A4 = { w: 595.28, h: 841.89 };
 const M = 40; // 40pt margin
@@ -234,7 +237,7 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   if (isAccepted) {
     textR('VERIFIED & CONFIRMED', A4.w - M, A4.h - 73, 8, bold, rgb(0.45, 0.88, 0.65));
   } else {
-    textR('RESERVATION ENQUIRY', A4.w - M, A4.h - 73, 8, bold, rgb(0.92, 0.78, 0.52));
+    textR('PENDING MANAGER VERIFICATION', A4.w - M, A4.h - 73, 7.5, bold, rgb(0.96, 0.72, 0.3));
   }
 
   let curY = A4.h - headerH - 24;
@@ -252,14 +255,12 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   const depositVal = calc.securityDeposit;
   const depositStr = 'Rs. ' + depositVal.toLocaleString('en-IN');
   const rawUtr = (b.upi_utr || b.utr || '').trim();
-  let amountPaidVal = totalPayableVal;
-  if (b.payment_amount) {
-    const pAmt = parseInt(String(b.payment_amount).replace(/[^\d]/g, ''), 10);
-    if (!isNaN(pAmt) && pAmt > 0 && pAmt < totalPayableVal) amountPaidVal = pAmt;
-  }
-  const amountPaidStr = 'Rs. ' + amountPaidVal.toLocaleString('en-IN');
-  const balanceDueVal = Math.max(0, totalPayableVal - amountPaidVal);
-  const balanceDueStr = balanceDueVal > 0 ? ('Rs. ' + balanceDueVal.toLocaleString('en-IN')) : 'Rs. 0 (Fully Paid)';
+
+  // If not verified/accepted by manager, payment is strictly NOT considered paid
+  const amountPaidVal = isAccepted ? totalPayableVal : 0;
+  const amountPaidStr = isAccepted ? totalPayableStr : 'Rs. 0';
+  const balanceDueVal = isAccepted ? 0 : totalPayableVal;
+  const balanceDueStr = isAccepted ? 'Rs. 0 (Fully Paid)' : totalPayableStr;
 
   page.drawRectangle({
     x: M,
@@ -279,7 +280,8 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   if (isAccepted) {
     text('Verified & Confirmed', M + colW + 10, curY - 22, 9.5, bold, DEEP_GREEN);
   } else {
-    text('Pending Move-In Validation', M + colW + 10, curY - 22, 9, bold, AMBER);
+    text('PENDING VERIFICATION', M + colW + 10, curY - 18, 8, bold, AMBER);
+    text('Not considered paid', M + colW + 10, curY - 28, 7.5, bold, CRIMSON);
   }
 
   text('PAYMENT MODE', M + colW * 2 + 10, curY - 6, 7.5, bold, SLATE);
@@ -371,21 +373,40 @@ export async function buildInvoicePdfDoc(b, h = {}) {
     sub: b.move_in_scope || (calc.durMonths > 1 ? `${calc.durMonths} months' rent + deposit` : "First month's rent + deposit"),
   });
 
-  tableRows.push({
-    label: isAccepted ? 'Total Move-In Paid via UPI' : 'Total Move-In Submitted via UPI',
-    val: `- ${amountPaidStr}`,
-    highlight: isAccepted ? DEEP_GREEN : CHARCOAL,
-    note: isAccepted
-      ? (rawUtr ? `UTR: ${rawUtr} (Verified & Approved)` : 'Verified & Approved')
-      : (rawUtr ? `UTR: ${rawUtr} (Pending move-in validation)` : 'To be validated'),
-  });
-
-  tableRows.push({
-    label: 'Remaining Balance Due on Move-In',
-    val: balanceDueVal > 0 ? ('Rs. ' + balanceDueVal.toLocaleString('en-IN')) : (isAccepted ? 'Rs. 0 — Fully Paid' : 'Rs. 0 (Pending Validation)'),
-    isTotal: true,
-    sub: balanceDueVal > 0 ? 'Payable on check-in / room handover' : (isAccepted ? 'All move-in charges fully settled (Rent + Security Deposit)' : 'All charges submitted — pending manager verification'),
-  });
+  if (isAccepted) {
+    tableRows.push({
+      label: 'Total Move-In Paid via UPI',
+      val: `- ${totalPayableStr}`,
+      highlight: DEEP_GREEN,
+      note: rawUtr ? `UTR: ${rawUtr} (Verified & Approved)` : 'Verified & Approved',
+    });
+    tableRows.push({
+      label: 'Remaining Balance Due on Move-In',
+      val: 'Rs. 0 — Fully Paid',
+      isTotal: true,
+      sub: 'All move-in charges fully settled (Rent + Security Deposit)',
+    });
+  } else {
+    if (rawUtr) {
+      tableRows.push({
+        label: 'Submitted Payment Reference (UPI)',
+        val: `UTR: ${rawUtr}`,
+        note: 'Pending manager verification',
+      });
+    }
+    tableRows.push({
+      label: 'Verified Amount Paid / Credited',
+      val: 'Rs. 0 (Pending Verification)',
+      highlight: CRIMSON,
+      note: 'Not considered paid until verified',
+    });
+    tableRows.push({
+      label: 'Total Balance Due on Move-In',
+      val: totalPayableStr,
+      isTotal: true,
+      sub: 'Until verification from manager, this is NOT considered as paid',
+    });
+  }
 
   for (const r of tableRows) {
     if (r.isTotal) {
@@ -405,7 +426,7 @@ export async function buildInvoicePdfDoc(b, h = {}) {
 
       text(r.label, M + 12, curY + 2, 10.5, bold, NAVY);
       if (r.sub) text(r.sub, M + 12, curY - 9, 7.5, reg, SLATE);
-      textR(r.val, A4.w - M - 12, curY - 2, 12, bold, (balanceDueVal === 0 && isAccepted) ? DEEP_GREEN : NAVY);
+      textR(r.val, A4.w - M - 12, curY - 2, 12, bold, isAccepted ? DEEP_GREEN : CRIMSON);
 
       curY -= 26;
     } else {
@@ -428,8 +449,8 @@ export async function buildInvoicePdfDoc(b, h = {}) {
     y: curY - 60,
     width: A4.w - M * 2,
     height: 68,
-    color: isAccepted ? GREEN_TINT : AMBER_TINT,
-    borderColor: isAccepted ? GREEN_BD : AMBER_BD,
+    color: isAccepted ? GREEN_TINT : CRIMSON_TINT,
+    borderColor: isAccepted ? GREEN_BD : CRIMSON_BD,
     borderWidth: 1.0,
   });
 
@@ -438,15 +459,15 @@ export async function buildInvoicePdfDoc(b, h = {}) {
     text('Note: Full move-in payment (Rent + Refundable Deposit) verified against bank records. Bed confirmed.', M + 16, curY - 26, 8, obliq, SLATE);
     const utrDisplay = rawUtr ? `Verified Bank UTR: ${rawUtr}` : 'Verified by Hostel Management';
     text(utrDisplay, M + 16, curY - 44, 9.5, bold, CHARCOAL);
-    textR(amountPaidStr, A4.w - M - 18, curY - 20, 18, bold, NAVY);
-    textR(`${amountPaidStr} — FULL PAYMENT`, A4.w - M - 18, curY - 40, 8.5, bold, DEEP_GREEN);
+    textR(totalPayableStr, A4.w - M - 18, curY - 20, 18, bold, NAVY);
+    textR(`${totalPayableStr} — FULL PAYMENT`, A4.w - M - 18, curY - 40, 8.5, bold, DEEP_GREEN);
   } else {
-    text('TOTAL MOVE-IN PAYMENT SUBMITTED — PENDING VALIDATION', M + 16, curY - 12, 8.5, bold, AMBER);
-    text('Note: Total move-in payment (Rent + Deposit) will be verified by the manager before move-in.', M + 16, curY - 26, 8, obliq, SLATE);
-    const utrDisplay = rawUtr ? `UPI Ref (UTR): ${rawUtr}` : 'UPI Ref (UTR): Pending Submission';
+    text('PAYMENT STATUS: PENDING MANAGER VERIFICATION', M + 16, curY - 12, 8.5, bold, CRIMSON);
+    text('IMPORTANT: Until verification from the manager, this is NOT considered as paid.', M + 16, curY - 26, 8, bold, CHARCOAL);
+    const utrDisplay = rawUtr ? `Submitted UPI Ref (UTR): ${rawUtr}` : 'UPI Ref (UTR): Pending Submission';
     text(utrDisplay, M + 16, curY - 44, 9.5, bold, CHARCOAL);
-    textR(amountPaidStr, A4.w - M - 18, curY - 20, 18, bold, NAVY);
-    textR('Pending Move-In Validation', A4.w - M - 18, curY - 40, 8.5, bold, AMBER);
+    textR('STATUS: UNVERIFIED', A4.w - M - 18, curY - 20, 13, bold, CRIMSON);
+    textR('NOT CONSIDERED AS PAID', A4.w - M - 18, curY - 38, 7.5, bold, CRIMSON);
   }
 
   curY -= 80;
@@ -459,7 +480,7 @@ export async function buildInvoicePdfDoc(b, h = {}) {
 
   const validationNote = isAccepted
     ? '- Payment Validation: Verified and officially accepted by hostel management against bank credit records.'
-    : '- Payment Validation: This payment is not yet validated. The warden will verify the 12-digit UTR against bank records before you move in.';
+    : '- STRICT PAYMENT POLICY: Until verification from the hostel manager against bank records, this is NOT considered as paid. Bed allocation is finalized only upon manager approval.';
 
   const notes = [
     validationNote,

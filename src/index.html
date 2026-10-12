@@ -1422,10 +1422,6 @@
               <span>Pay <strong id="cstepPayAmt">₹13,900</strong></span>
               <i class="fa-solid fa-arrow-right"></i>
             </button>
-            <button type="button" class="confirm-download-invoice" id="step1DownloadInvoiceBtn" title="Download Official Invoice PDF">
-              <i class="fa-solid fa-file-arrow-down"></i>
-              <span>Invoice PDF</span>
-            </button>
             <a href="#" target="_blank" rel="noopener" class="confirm-wa" id="modalWhatsAppBtn" title="Confirm on WhatsApp">
               <i class="fa-brands fa-whatsapp"></i>
               <span>WhatsApp</span>
@@ -1496,11 +1492,15 @@
             The manager checks this against the UPI notification before confirming your bed.
           </p>
 
-          <div class="cstep-invoice-action" id="cstepInvoiceAction" style="display: none;">
-            <button type="button" class="confirm-download-invoice" id="downloadInvoiceBtn">
+          <div class="cstep-invoice-action" id="cstepInvoiceAction">
+            <button type="button" class="confirm-download-invoice" id="downloadInvoiceBtn" title="Download Official Invoice PDF">
               <i class="fa-solid fa-file-arrow-down"></i>
               <span>Download Official Invoice (PDF)</span>
             </button>
+            <p class="cstep-invoice-disclaimer">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <span><strong>Notice:</strong> Until verification from the hostel manager, this is <u>NOT considered as paid</u>.</span>
+            </p>
           </div>
 
           <div class="cstep-actions">
