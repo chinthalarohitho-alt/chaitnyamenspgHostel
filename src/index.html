@@ -828,15 +828,15 @@
                 </div>
 
                 <!-- 📅 Interactive Day-wise Stay Picker (Revealed on Daily Stay) -->
-                <div class="daily-stay-picker" id="dailyStayPicker" style="display: none;">
+                <div class="daily-stay-picker" id="dailyStayPicker" hidden>
                   <div class="daily-picker-header">
-                    <span><i class="fa-solid fa-calendar-day"></i> Select Number of Days:</span>
+                    <span><i class="fa-solid fa-calendar-day"></i> Number of Days:</span>
                     <span class="daily-rate-tag" id="dispDailyRateTag">₹350 / day</span>
                   </div>
                   <div class="daily-stepper-wrap">
                     <button type="button" class="daily-step-btn" id="dailyStepDecr" aria-label="Decrease days"><i class="fa-solid fa-minus"></i></button>
                     <div class="daily-input-wrap">
-                      <input type="number" id="dailyDaysInput" min="1" max="30" value="1" inputmode="numeric">
+                      <input type="number" id="dailyDaysInput" min="1" max="180" value="1" inputmode="numeric" aria-label="Number of days">
                       <span class="daily-days-label" id="dailyDaysLabel">Day</span>
                     </div>
                     <button type="button" class="daily-step-btn" id="dailyStepIncr" aria-label="Increase days"><i class="fa-solid fa-plus"></i></button>
@@ -847,7 +847,9 @@
                     <button type="button" class="daily-preset-btn" data-days="3">3 Days</button>
                     <button type="button" class="daily-preset-btn" data-days="5">5 Days</button>
                     <button type="button" class="daily-preset-btn" data-days="7">7 Days</button>
+                    <button type="button" class="daily-preset-btn" data-days="10">10 Days</button>
                     <button type="button" class="daily-preset-btn" data-days="15">15 Days</button>
+                    <button type="button" class="daily-preset-btn" data-days="30">30 Days</button>
                   </div>
                   <div class="daily-stay-note" id="dailyStayRangeHint">
                     <i class="fa-solid fa-circle-info"></i> Stay count starts directly from your move-in date (Day 1).
@@ -925,6 +927,16 @@
                         <button type="button" class="cal-action-btn cal-today-btn" id="calTodayBtn">Select Today</button>
                       </div>
                     </div>
+                  </div>
+
+                  <!-- Number of Days field for Daily Stay in Step 4 -->
+                  <div class="rsv-field" id="rsvDailyDaysField" style="display: none;">
+                    <label for="rsvDailyDaysInput" class="rsv-label">Stay Duration (Days) <span class="req">*</span></label>
+                    <div class="rsv-input-wrap">
+                      <i class="fa-solid fa-calendar-check"></i>
+                      <input type="number" id="rsvDailyDaysInput" name="rsvDailyDaysInput" class="rsv-input" min="1" max="180" value="1" placeholder="Number of days (e.g. 3)">
+                    </div>
+                    <span class="field-hint" id="rsvDailyDaysHint" style="font-size:0.8rem; color:#cbd5e1; margin-top:4px; display:block;">Total days of daily stay (tariff applies per day)</span>
                   </div>
 
                   <div class="rsv-field">

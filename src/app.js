@@ -2822,6 +2822,10 @@ function renderEnquiriesTable() {
 
                 <div class="enq-inline-pills">
                   <div class="enq-pill">
+                    <span class="enq-pill-lbl">Stay Duration:</span>
+                    <span class="enq-pill-val">${escapeHtml(b.duration || '1 Month')}</span>
+                  </div>
+                  <div class="enq-pill">
                     <span class="enq-pill-lbl">Security Deposit:</span>
                     <span class="enq-pill-val">${depositVal}</span>
                   </div>
@@ -2970,7 +2974,11 @@ function renderEnquiriesTable() {
         <td>
           <strong>${escapeHtml(b.room || 'Room')}</strong><br>
           <small style="color:var(--text-muted);">${escapeHtml(b.floor || '1st Floor')}</small><br>
-          <small style="color:var(--primary); font-weight:600;"><i class="fa-regular fa-calendar"></i> ${escapeHtml(b.date || '-')}</small>
+          <small style="color:var(--primary); font-weight:600;"><i class="fa-regular fa-calendar"></i> ${escapeHtml(b.date || '-')}</small><br>
+          <span style="display:inline-block; margin-top:4px; padding:2px 7px; background:rgba(201,164,92,0.15); border:1px solid rgba(201,164,92,0.3); border-radius:6px; font-size:0.75rem; color:#f8fafc; font-weight:600;">
+            <i class="fa-solid fa-clock"></i> ${escapeHtml(b.duration || '1 Month')}
+          </span>
+          ${b.stay_period ? `<br><small style="color:#c9a45c; font-size:0.72rem; display:block; margin-top:2px;">${escapeHtml(b.stay_period)}</small>` : ''}
         </td>
         <td>
           <div style="font-weight:700; color:var(--text-main); font-size:0.92rem;">Deposit: ${depositVal}</div>
@@ -3601,6 +3609,9 @@ function initRoomCalculator() {
   const durBtnDaily = document.getElementById('durBtnDaily');
   const dailyStayPicker = document.getElementById('dailyStayPicker');
   const dailyDaysInput = document.getElementById('dailyDaysInput');
+  const dailyDaysLabel = document.getElementById('dailyDaysLabel');
+  const rsvDailyDaysField = document.getElementById('rsvDailyDaysField');
+  const rsvDailyDaysInput = document.getElementById('rsvDailyDaysInput');
   const dailyStepDecr = document.getElementById('dailyStepDecr');
   const dailyStepIncr = document.getElementById('dailyStepIncr');
   const dailyPresetBtns = document.querySelectorAll('.daily-preset-btn');
@@ -3799,6 +3810,17 @@ function initRoomCalculator() {
     });
   });
 
+  // Helper to show/hide Daily Stay pickers cleanly across DOM
+  function setDailyStayVisibility(show) {
+    if (dailyStayPicker) {
+      dailyStayPicker.hidden = !show;
+      dailyStayPicker.style.display = show ? 'block' : 'none';
+    }
+    if (rsvDailyDaysField) {
+      rsvDailyDaysField.style.display = show ? 'block' : 'none';
+    }
+  }
+
   // Monthly duration button clicks
   durationButtons.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -3807,7 +3829,7 @@ function initRoomCalculator() {
       btn.classList.add('active');
 
       isDailyStay = false;
-      if (dailyStayPicker) dailyStayPicker.hidden = true;
+      setDailyStayVisibility(false);
 
       currentDurationMonths = parseInt(btn.dataset.months, 10) || 1;
       currentDiscountRate = parseFloat(btn.dataset.discount) || 0;
@@ -3823,7 +3845,7 @@ function initRoomCalculator() {
       durBtnDaily.classList.add('active');
 
       isDailyStay = true;
-      if (dailyStayPicker) dailyStayPicker.hidden = false;
+      setDailyStayVisibility(true);
 
       recalculate();
     });
@@ -3837,44 +3859,48 @@ function initRoomCalculator() {
     });
   }
 
+  // Two-way synchronization between Step 3 & Step 4 days input fields
+  function syncDailyDays(val) {
+    let cleanVal = parseInt(val, 10);
+    if (isNaN(cleanVal) || cleanVal < 1) cleanVal = 1;
+    if (cleanVal > 180) cleanVal = 180;
+
+    currentDailyDays = cleanVal;
+    if (dailyDaysInput && parseInt(dailyDaysInput.value, 10) !== cleanVal) {
+      dailyDaysInput.value = cleanVal;
+    }
+    if (rsvDailyDaysInput && parseInt(rsvDailyDaysInput.value, 10) !== cleanVal) {
+      rsvDailyDaysInput.value = cleanVal;
+    }
+    if (dailyDaysLabel) {
+      dailyDaysLabel.textContent = cleanVal === 1 ? 'Day' : 'Days';
+    }
+    updatePresetChips();
+    recalculate();
+  }
+
   if (dailyDaysInput) {
-    dailyDaysInput.addEventListener('input', () => {
-      let val = parseInt(dailyDaysInput.value, 10);
-      if (isNaN(val) || val < 1) val = 1;
-      if (val > 30) val = 30;
-      currentDailyDays = val;
-      updatePresetChips();
-      recalculate();
-    });
-    dailyDaysInput.addEventListener('change', () => {
-      let val = parseInt(dailyDaysInput.value, 10);
-      if (isNaN(val) || val < 1) val = 1;
-      if (val > 30) val = 30;
-      dailyDaysInput.value = val;
-      currentDailyDays = val;
-      updatePresetChips();
-      recalculate();
-    });
+    dailyDaysInput.addEventListener('input', () => syncDailyDays(dailyDaysInput.value));
+    dailyDaysInput.addEventListener('change', () => syncDailyDays(dailyDaysInput.value));
+  }
+
+  if (rsvDailyDaysInput) {
+    rsvDailyDaysInput.addEventListener('input', () => syncDailyDays(rsvDailyDaysInput.value));
+    rsvDailyDaysInput.addEventListener('change', () => syncDailyDays(rsvDailyDaysInput.value));
   }
 
   if (dailyStepDecr) {
     dailyStepDecr.addEventListener('click', () => {
       if (currentDailyDays > 1) {
-        currentDailyDays--;
-        if (dailyDaysInput) dailyDaysInput.value = currentDailyDays;
-        updatePresetChips();
-        recalculate();
+        syncDailyDays(currentDailyDays - 1);
       }
     });
   }
 
   if (dailyStepIncr) {
     dailyStepIncr.addEventListener('click', () => {
-      if (currentDailyDays < 30) {
-        currentDailyDays++;
-        if (dailyDaysInput) dailyDaysInput.value = currentDailyDays;
-        updatePresetChips();
-        recalculate();
+      if (currentDailyDays < 180) {
+        syncDailyDays(currentDailyDays + 1);
       }
     });
   }
@@ -3883,10 +3909,7 @@ function initRoomCalculator() {
     pBtn.addEventListener('click', () => {
       const d = parseInt(pBtn.dataset.days, 10);
       if (d) {
-        currentDailyDays = d;
-        if (dailyDaysInput) dailyDaysInput.value = d;
-        updatePresetChips();
-        recalculate();
+        syncDailyDays(d);
       }
     });
   });
@@ -3927,12 +3950,12 @@ function initRoomCalculator() {
     }
     if (durBtnDaily && durBtnDaily.classList.contains('active')) {
       isDailyStay = true;
-      if (dailyStayPicker) dailyStayPicker.hidden = false;
+      setDailyStayVisibility(true);
     } else {
       const activeDur = document.querySelector('#calcDurationOptions .duration-btn[data-months].active');
       if (activeDur) {
         isDailyStay = false;
-        if (dailyStayPicker) dailyStayPicker.hidden = true;
+        setDailyStayVisibility(false);
         currentDurationMonths = parseInt(activeDur.dataset.months, 10) || 1;
         currentDiscountRate = parseFloat(activeDur.dataset.discount) || 0;
       }
