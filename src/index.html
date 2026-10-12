@@ -2057,16 +2057,24 @@
 
             <!-- Day-Wise Stay Pricing -->
             <div class="mgr-section-box mt-16">
-              <h4><i class="fa-solid fa-calendar-day"></i> Day-Wise Stay Pricing (Configurable Daily Rate)</h4>
-              <p class="mgr-hint">Set the per-day accommodation charge for residents staying on a day-by-day basis instead of full monthly rental.</p>
+              <h4><i class="fa-solid fa-calendar-day"></i> Day-Wise Stay Pricing (Configurable Daily Rate &amp; Promotional Discount)</h4>
+              <p class="mgr-hint">Set the final per-day room rate you want to collect and configure an optional discount percentage. The website displays the pre-discount original rate (e.g. ₹400 + 10% = ₹440) strikethrough with a discount badge, billing the guest your exact final rate.</p>
               <div class="mgr-discounts-grid">
                 <div class="mgr-input-group">
                   <label for="cfgDailyRate">Daily Stay Base Rate (₹ / Day)</label>
                   <div class="mgr-currency-wrap">
                     <span>₹</span>
-                    <input type="number" id="cfgDailyRate" class="mgr-input" value="350" step="25" min="50">
+                    <input type="number" id="cfgDailyRate" class="mgr-input" value="400" step="25" min="50">
                   </div>
-                  <small class="mgr-field-hint">Standard per-day room rate for Non-AC day-wise stay.</small>
+                  <small class="mgr-field-hint">Final payable base rate per day (e.g. ₹400).</small>
+                </div>
+                <div class="mgr-input-group">
+                  <label for="cfgDailyDiscount">Daily Stay Discount (%)</label>
+                  <div class="mgr-percent-wrap">
+                    <input type="number" id="cfgDailyDiscount" class="mgr-input" value="10" min="0" max="90" step="1">
+                    <span>%</span>
+                  </div>
+                  <small class="mgr-field-hint">Promo discount shown (e.g. 10% OFF).</small>
                 </div>
                 <div class="mgr-input-group">
                   <label for="cfgDailyAcAdd">Daily AC Surcharge (₹ / Day)</label>
@@ -2075,6 +2083,32 @@
                     <input type="number" id="cfgDailyAcAdd" class="mgr-input" value="100" step="25" min="0">
                   </div>
                   <small class="mgr-field-hint">Additional AC charge per day if resident chooses AC.</small>
+                </div>
+              </div>
+
+              <!-- Live Discount Flow Preview Card -->
+              <div class="mgr-daily-calc-preview" id="mgrDailyPreview">
+                <div class="mgr-daily-preview-head">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> <strong>Live Pricing Display Preview (Guest View):</strong>
+                </div>
+                <div class="mgr-daily-preview-flow">
+                  <div class="mgr-prev-col">
+                    <span class="mgr-prev-k">Original Amount Shown</span>
+                    <span class="mgr-prev-v strike" id="mgrPrevOriginal">₹440</span>
+                    <small class="mgr-prev-sub" id="mgrPrevOriginalFormula">Base + 10%</small>
+                  </div>
+                  <i class="fa-solid fa-minus mgr-prev-arrow"></i>
+                  <div class="mgr-prev-col">
+                    <span class="mgr-prev-k">Promotional Discount</span>
+                    <span class="mgr-prev-v tag" id="mgrPrevDiscount">10% OFF (-₹40)</span>
+                    <small class="mgr-prev-sub">Marketing concession</small>
+                  </div>
+                  <i class="fa-solid fa-arrow-right mgr-prev-arrow"></i>
+                  <div class="mgr-prev-col highlight">
+                    <span class="mgr-prev-k">Final Rate Guest Pays</span>
+                    <strong class="mgr-prev-v final" id="mgrPrevFinal">₹400 / day</strong>
+                    <small class="mgr-prev-sub">Exact amount billed</small>
+                  </div>
                 </div>
               </div>
             </div>

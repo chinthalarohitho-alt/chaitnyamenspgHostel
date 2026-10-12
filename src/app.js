@@ -886,7 +886,8 @@ const DEFAULT_HOSTEL_CONFIG = {
     securityDeposit: 5400,
     tokenAmount: 500,
     advanceAmount: 1000,
-    dailyRate: 350,
+    dailyRate: 400,
+    dailyDiscount: 10,
     dailyAcAdd: 100
   },
   texts: {
@@ -1074,7 +1075,14 @@ function applyHostelConfigToSite(cfg) {
   // Daily stay badge
   const durDailyBadge = document.getElementById('durDailyBadge');
   if (durDailyBadge) {
-    durDailyBadge.textContent = `₹${Number(p.dailyRate ?? 350).toLocaleString('en-IN')}/day`;
+    const dailyBase = Number(p.dailyRate ?? 400);
+    const dailyDiscount = Number(p.dailyDiscount ?? 0);
+    if (dailyDiscount > 0) {
+      const origDaily = dailyBase + Math.round((dailyBase * dailyDiscount) / 100);
+      durDailyBadge.innerHTML = `<span class="dur-del-price">₹${origDaily.toLocaleString('en-IN')}</span> ₹${dailyBase.toLocaleString('en-IN')}/d <span class="discount-tag" style="margin-left:2px;font-size:0.65rem;padding:1px 5px;">${dailyDiscount}% OFF</span>`;
+    } else {
+      durDailyBadge.textContent = `₹${dailyBase.toLocaleString('en-IN')}/day`;
+    }
   }
 
   // Booking form advance token display
@@ -2007,9 +2015,11 @@ function initWardenPortal() {
     setVal('cfgDisc12m', cfg.pricing.disc12m);
     setVal('cfgSecurityDeposit', (cfg.pricing.securityDeposit !== undefined && cfg.pricing.securityDeposit !== null) ? cfg.pricing.securityDeposit : 5400);
     setVal('cfgAdvanceAmount', (cfg.pricing.advanceAmount !== undefined && cfg.pricing.advanceAmount !== null) ? cfg.pricing.advanceAmount : 1000);
-    setVal('cfgDailyRate', cfg.pricing.dailyRate ?? 350);
+    setVal('cfgDailyRate', cfg.pricing.dailyRate ?? 400);
+    setVal('cfgDailyDiscount', cfg.pricing.dailyDiscount ?? 10);
     setVal('cfgDailyAcAdd', cfg.pricing.dailyAcAdd ?? 100);
     if (document.getElementById('cfgTokenAmount')) setVal('cfgTokenAmount', cfg.pricing.tokenAmount || 500);
+    updateManagerDailyPreview();
 
     // Texts
     setVal('cfgHostelName', cfg.texts.hostelName);
@@ -2062,6 +2072,33 @@ function initWardenPortal() {
     updatePrev('prevLaundryImg', cfg.photos.laundryImg);
     updatePrev('prevSecurityImg', cfg.photos.securityImg);
   }
+
+  function updateManagerDailyPreview() {
+    const rateInput = document.getElementById('cfgDailyRate');
+    const discInput = document.getElementById('cfgDailyDiscount');
+    if (!rateInput || !discInput) return;
+    const rate = Math.max(0, parseInt(rateInput.value, 10) || 0);
+    const disc = Math.max(0, Math.min(90, parseInt(discInput.value, 10) || 0));
+    const orig = disc > 0 ? (rate + Math.round((rate * disc) / 100)) : rate;
+    const diff = orig - rate;
+
+    const elOrig = document.getElementById('mgrPrevOriginal');
+    const elFormula = document.getElementById('mgrPrevOriginalFormula');
+    const elDisc = document.getElementById('mgrPrevDiscount');
+    const elFinal = document.getElementById('mgrPrevFinal');
+
+    if (elOrig) elOrig.textContent = `₹${orig.toLocaleString('en-IN')}`;
+    if (elFormula) elFormula.textContent = disc > 0 ? `₹${rate} + ${disc}%` : 'No discount';
+    if (elDisc) {
+      elDisc.textContent = disc > 0 ? `${disc}% OFF (-₹${diff.toLocaleString('en-IN')})` : '0% (No discount)';
+    }
+    if (elFinal) elFinal.textContent = `₹${rate.toLocaleString('en-IN')} / day`;
+  }
+
+  const cfgDailyRateEl = document.getElementById('cfgDailyRate');
+  const cfgDailyDiscountEl = document.getElementById('cfgDailyDiscount');
+  if (cfgDailyRateEl) cfgDailyRateEl.addEventListener('input', updateManagerDailyPreview);
+  if (cfgDailyDiscountEl) cfgDailyDiscountEl.addEventListener('input', updateManagerDailyPreview);
 
   // 3. Photo URL live typing preview
   const photoInputs = [
@@ -2152,7 +2189,8 @@ function initWardenPortal() {
           disc12m: getNum('cfgDisc12m', 15),
           securityDeposit: getNum('cfgSecurityDeposit', 5400),
           advanceAmount: getNum('cfgAdvanceAmount', 1000),
-          dailyRate: getNum('cfgDailyRate', 350),
+          dailyRate: getNum('cfgDailyRate', 400),
+          dailyDiscount: getNum('cfgDailyDiscount', 0),
           dailyAcAdd: getNum('cfgDailyAcAdd', 100)
         },
         texts: {
@@ -2234,7 +2272,7 @@ function initWardenPortal() {
 
       for (const [id, label] of [
         ['cfgDisc3m', '3 month discount'], ['cfgDisc6m', '6 month discount'],
-        ['cfgDisc12m', '12 month discount'],
+        ['cfgDisc12m', '12 month discount'], ['cfgDailyDiscount', 'Daily stay discount'],
       ]) {
         const el = document.getElementById(id);
         if (!el) continue;
@@ -4036,7 +4074,8 @@ function initRoomCalculator() {
     const moveInInput = (document.getElementById('moveInDateDisplay')?.value || document.getElementById('moveInDate')?.value || '').trim();
 
     if (isDailyStay) {
-      const dailyBase = Number(cfg?.pricing?.dailyRate) || 350;
+      const dailyBase = Number(cfg?.pricing?.dailyRate) || 400;
+      const dailyDiscountPct = Number(cfg?.pricing?.dailyDiscount) || 0;
       const dailyAc = Number(cfg?.pricing?.dailyAcAdd) || 100;
       const acCost = isAc ? dailyAc : 0;
       const dailyPerDay = dailyBase + acCost;
@@ -4044,9 +4083,21 @@ function initRoomCalculator() {
       const securityDeposit = 0; // Deposit is completely waived for day-wise stay!
       const initialMoveIn = stayTotal;
 
+      const hasDailyDiscount = dailyDiscountPct > 0;
+      const origDailyBase = hasDailyDiscount
+        ? (dailyBase + Math.round((dailyBase * dailyDiscountPct) / 100))
+        : dailyBase;
+      const origDailyPerDay = origDailyBase + acCost;
+      const dailySavingsPerDay = origDailyBase - dailyBase;
+      const totalDailySavings = dailySavingsPerDay * currentDailyDays;
+
       const dispDailyRateTag = document.getElementById('dispDailyRateTag');
       if (dispDailyRateTag) {
-        dispDailyRateTag.textContent = `${formatInr(dailyPerDay)} / day`;
+        if (hasDailyDiscount) {
+          dispDailyRateTag.innerHTML = `<del class="daily-strike-tag">${formatInr(origDailyPerDay)}</del> <span class="daily-final-rate">${formatInr(dailyPerDay)}</span> / day <span class="daily-badge-pill">${dailyDiscountPct}% OFF</span>`;
+        } else {
+          dispDailyRateTag.textContent = `${formatInr(dailyPerDay)} / day`;
+        }
       }
 
       const stayPeriodInfo = moveInInput
@@ -4062,18 +4113,37 @@ function initRoomCalculator() {
         }
       }
 
-      if (dispBaseRent) dispBaseRent.textContent = `${formatInr(dailyBase)} / day`;
+      if (dispBaseRent) {
+        if (hasDailyDiscount) {
+          dispBaseRent.innerHTML = `<del class="price-strikethrough">${formatInr(origDailyBase)}</del> ${formatInr(dailyBase)} / day`;
+        } else {
+          dispBaseRent.textContent = `${formatInr(dailyBase)} / day`;
+        }
+      }
       if (dispAcCost) dispAcCost.textContent = acCost > 0 ? `+ ${formatInr(acCost)} / day` : '+ ₹0';
       if (dispSubtotalLabel) dispSubtotalLabel.textContent = `Stay Tariff (${currentDailyDays}d)`;
       if (dispMonthlyTotal) dispMonthlyTotal.textContent = formatInr(stayTotal);
-      if (dispDiscountRow) dispDiscountRow.style.display = 'none';
+      
+      if (dispDiscountRow && dispDiscountVal) {
+        if (hasDailyDiscount) {
+          dispDiscountRow.style.display = 'flex';
+          const discLabelEl = dispDiscountRow.querySelector('.sub-label');
+          if (discLabelEl) discLabelEl.textContent = `Promo Savings (${dailyDiscountPct}% OFF)`;
+          dispDiscountVal.textContent = currentDailyDays > 1
+            ? `- ${formatInr(totalDailySavings)} over ${currentDailyDays} days`
+            : `- ${formatInr(totalDailySavings)} (${dailyDiscountPct}% OFF)`;
+        } else {
+          dispDiscountRow.style.display = 'none';
+        }
+      }
+
       if (dispStayTotalRow) dispStayTotalRow.style.display = 'none';
       if (dispSecurityDeposit) dispSecurityDeposit.textContent = '₹0 (Waived)';
       if (dispMoveInTotal) dispMoveInTotal.textContent = formatInr(initialMoveIn);
       if (dispMoveInScope) {
         dispMoveInScope.textContent = stayPeriodInfo
-          ? `${currentDailyDays} day${currentDailyDays > 1 ? 's' : ''} stay (${stayPeriodInfo.displayText})`
-          : `${currentDailyDays} day${currentDailyDays > 1 ? 's' : ''} stay (count starts on move-in day, no deposit)`;
+          ? `${currentDailyDays} day${currentDailyDays > 1 ? 's' : ''} stay (${stayPeriodInfo.displayText})${hasDailyDiscount ? ` • ${dailyDiscountPct}% promo discount included` : ''}`
+          : `${currentDailyDays} day${currentDailyDays > 1 ? 's' : ''} stay (count starts on move-in day, no deposit)${hasDailyDiscount ? ` • ${dailyDiscountPct}% promo discount included` : ''}`;
       }
 
       const activeRoomName = roomNames[currentRoom] || '2 Sharing';
@@ -4128,6 +4198,8 @@ function initRoomCalculator() {
     if (dispDiscountRow && dispDiscountVal) {
       if (discountAmount > 0) {
         dispDiscountRow.style.display = 'flex';
+        const discLabelEl = dispDiscountRow.querySelector('.sub-label');
+        if (discLabelEl) discLabelEl.textContent = 'Term Savings';
         const termSaving = discountAmount * currentDurationMonths;
         dispDiscountVal.textContent = currentDurationMonths > 1
           ? `- ${formatInr(termSaving)} over ${currentDurationMonths} months (${Math.round(currentDiscountRate * 100)}%)`
@@ -5030,7 +5102,8 @@ function initBookingForm() {
       room: `${sel.roomName} (${sel.climate})`,
       climate: sel.climate,
       duration: sel.duration,
-      is_daily: sel.isDaily
+      is_daily: sel.isDaily,
+      daily_days: sel.dailyDays
     }, pricing);
 
     const monthlyTotalStr = document.getElementById('dispMonthlyTotal')?.textContent?.trim() || `₹${bookingPricing.monthlyRent.toLocaleString('en-IN')}`;

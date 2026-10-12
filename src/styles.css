@@ -4741,6 +4741,125 @@ select.rsv-input,
   gap: 12px;
 }
 
+/* Manager Daily Pricing Flow Preview */
+.mgr-daily-calc-preview {
+  margin-top: 14px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px dashed rgba(201, 164, 92, 0.4);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.mgr-daily-preview-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #c9a45c;
+  margin-bottom: 10px;
+}
+
+.mgr-daily-preview-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mgr-prev-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mgr-prev-k {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mgr-prev-v {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.mgr-prev-v.strike {
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+
+.mgr-prev-v.tag {
+  color: #4ade80;
+}
+
+.mgr-prev-v.final {
+  color: #ff8533;
+}
+
+.mgr-prev-sub {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.mgr-prev-arrow {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.mgr-prev-col.highlight {
+  background: rgba(255, 133, 51, 0.1);
+  border: 1px solid rgba(255, 133, 51, 0.3);
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+/* Strikethrough & badges for guest daily stay display */
+.dur-del-price {
+  text-decoration: line-through;
+  opacity: 0.7;
+  font-size: 0.68rem;
+  margin-right: 3px;
+  color: #94a3b8;
+}
+
+.daily-strike-tag {
+  text-decoration: line-through;
+  opacity: 0.75;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  margin-right: 5px;
+}
+
+.daily-final-rate {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.daily-badge-pill {
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  color: #4ade80;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 12px;
+  margin-left: 6px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.price-strikethrough {
+  text-decoration: line-through;
+  opacity: 0.65;
+  margin-right: 6px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+
 /* Photo Cards */
 .mgr-photos-grid {
   display: grid;

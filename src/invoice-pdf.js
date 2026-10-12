@@ -211,14 +211,25 @@ export function calculateInvoicePricing(b = {}, p = {}) {
   let calculatedRent = 0;
   let securityDeposit = 0;
   let dailyRate = 0;
+  let dailyDiscountRate = 0;
+  let originalDailyRate = 0;
+  let termSavings = 0;
 
   if (isDaily) {
     durDays = b.daily_days || b.dailyDays || parseInt(durStr.replace(/[^\d]/g, ''), 10) || 1;
-    const dailyBase = Number(pricing.dailyRate) || 350;
+    const dailyBase = Number(pricing.dailyRate) || 400;
+    const dailyDiscount = Number(pricing.dailyDiscount) || 0;
     const dailyAc = Number(pricing.dailyAcAdd) || 100;
     dailyRate = dailyBase + (isAc ? dailyAc : 0);
     calculatedRent = dailyRate * durDays;
     securityDeposit = 0; // Deposit waived for day-wise stays
+
+    if (dailyDiscount > 0) {
+      dailyDiscountRate = dailyDiscount / 100;
+      const origDailyBase = dailyBase + Math.round((dailyBase * dailyDiscount) / 100);
+      originalDailyRate = origDailyBase + (isAc ? dailyAc : 0);
+      termSavings = (origDailyBase - dailyBase) * durDays;
+    }
   } else {
     durMonths = parseInt(durStr.replace(/[^\d]/g, ''), 10) || 1;
     if (durMonths >= 12) discountRate = (Number(pricing.disc12m) || 15) / 100;
@@ -230,11 +241,11 @@ export function calculateInvoicePricing(b = {}, p = {}) {
     securityDeposit = (pricing.securityDeposit !== undefined && pricing.securityDeposit !== null)
       ? Number(pricing.securityDeposit)
       : 5400;
+    termSavings = discountAmount * durMonths;
   }
 
   const stayTotal = isDaily ? calculatedRent : calculatedRent * durMonths;
   const moveInTotal = stayTotal + securityDeposit;
-  let termSavings = isDaily ? 0 : discountAmount * durMonths;
   if (b.term_savings) {
     const rawS = parseInt(String(b.term_savings).replace(/[^\d]/g, ''), 10);
     if (!isNaN(rawS) && rawS > 0) termSavings = rawS;
@@ -281,6 +292,8 @@ export function calculateInvoicePricing(b = {}, p = {}) {
     durDays,
     durMonths,
     dailyRate,
+    originalDailyRate,
+    dailyDiscountRate,
     discountRate,
     termSavings: termSavings > 0 ? termSavings : 0,
     monthlyRent: finalMonthly,
@@ -544,10 +557,28 @@ export async function buildInvoicePdfDoc(b, h = {}) {
         note: 'Count starts directly from move-in date'
       });
     }
-    tableRows.push({
-      label: 'Daily Tariff Rate',
-      val: 'Rs. ' + calc.dailyRate.toLocaleString('en-IN') + ' / day'
-    });
+    if (calc.dailyDiscountRate > 0 && calc.originalDailyRate > 0) {
+      tableRows.push({
+        label: 'Standard Daily Tariff',
+        val: 'Rs. ' + calc.originalDailyRate.toLocaleString('en-IN') + ' / day',
+        note: 'Before promotional discount'
+      });
+      tableRows.push({
+        label: `Daily Promo Discount (${Math.round(calc.dailyDiscountRate * 100)}% OFF)`,
+        val: '- Rs. ' + calc.termSavings.toLocaleString('en-IN'),
+        note: 'Special concession applied'
+      });
+      tableRows.push({
+        label: 'Effective Daily Rate',
+        val: 'Rs. ' + calc.dailyRate.toLocaleString('en-IN') + ' / day',
+        note: 'Final payable per day'
+      });
+    } else {
+      tableRows.push({
+        label: 'Daily Tariff Rate',
+        val: 'Rs. ' + calc.dailyRate.toLocaleString('en-IN') + ' / day'
+      });
+    }
     tableRows.push({
       label: 'Stay Rent Subtotal',
       val: 'Rs. ' + calc.monthlyRent.toLocaleString('en-IN')

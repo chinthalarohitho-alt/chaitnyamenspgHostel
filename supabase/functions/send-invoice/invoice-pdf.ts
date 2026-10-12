@@ -215,13 +215,21 @@ export async function buildInvoicePdf(
 
   if (isDaily) {
     const durDays = parseInt(durStr.replace(/[^\d]/g, ""), 10) || 1;
-    const dailyBase = Number(p.dailyRate) || 350;
+    const dailyBase = Number(p.dailyRate) || 400;
+    const dailyDiscount = Number(p.dailyDiscount) || 0;
     const dailyAc = Number(p.dailyAcAdd) || 100;
     const dailyRate = dailyBase + (isAc ? dailyAc : 0);
     const stayTariff = dailyRate * durDays;
     moveInTotal = stayTariff;
-    rentLabel = "Daily Tariff Rate";
-    rentValue = `Rs. ${dailyRate.toLocaleString("en-IN")} / day`;
+    if (dailyDiscount > 0) {
+      const origDailyBase = dailyBase + Math.round((dailyBase * dailyDiscount) / 100);
+      const origDailyRate = origDailyBase + (isAc ? dailyAc : 0);
+      rentLabel = `Daily Rate (${dailyDiscount}% OFF)`;
+      rentValue = `Rs. ${dailyRate.toLocaleString("en-IN")} / day (Orig: Rs. ${origDailyRate.toLocaleString("en-IN")})`;
+    } else {
+      rentLabel = "Daily Tariff Rate";
+      rentValue = `Rs. ${dailyRate.toLocaleString("en-IN")} / day`;
+    }
     depositValue = "Rs. 0 (Waived for daily stay)";
   } else {
     const durMonths = parseInt(durStr.replace(/[^\d]/g, ""), 10) || 1;
