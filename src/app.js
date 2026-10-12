@@ -323,7 +323,7 @@ function initConfirmSteps() {
     const success = await downloadInvoicePdf(currentBookingContext, hostelInfo);
     btnTarget.disabled = false;
     if (success) {
-      btnTarget.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span>Invoice Downloaded!</span>';
+      btnTarget.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span>Downloaded!</span>';
       setTimeout(() => { btnTarget.innerHTML = prevHtml; }, 3500);
       showSiteToast('Invoice Downloaded', 'Official booking receipt PDF saved to Downloads.', 'fa-solid fa-file-arrow-down');
     } else {
