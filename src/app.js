@@ -3610,11 +3610,6 @@ function initRoomCalculator() {
   const dailyStayPicker = document.getElementById('dailyStayPicker');
   const dailyDaysInput = document.getElementById('dailyDaysInput');
   const dailyDaysLabel = document.getElementById('dailyDaysLabel');
-  const rsvDailyDaysField = document.getElementById('rsvDailyDaysField');
-  const rsvDailyDaysInput = document.getElementById('rsvDailyDaysInput');
-  const dailyStepDecr = document.getElementById('dailyStepDecr');
-  const dailyStepIncr = document.getElementById('dailyStepIncr');
-  const dailyPresetBtns = document.querySelectorAll('.daily-preset-btn');
   const preferredFloorSelect = document.getElementById('preferredFloor');
   const acPillLabel = document.getElementById('acPillLabel');
 
@@ -3810,14 +3805,11 @@ function initRoomCalculator() {
     });
   });
 
-  // Helper to show/hide Daily Stay pickers cleanly across DOM
+  // Helper to show/hide Daily Stay picker cleanly
   function setDailyStayVisibility(show) {
     if (dailyStayPicker) {
       dailyStayPicker.hidden = !show;
       dailyStayPicker.style.display = show ? 'block' : 'none';
-    }
-    if (rsvDailyDaysField) {
-      rsvDailyDaysField.style.display = show ? 'block' : 'none';
     }
   }
 
@@ -3848,71 +3840,32 @@ function initRoomCalculator() {
       setDailyStayVisibility(true);
 
       recalculate();
+      if (dailyDaysInput) {
+        dailyDaysInput.focus();
+        dailyDaysInput.select?.();
+      }
     });
   }
 
-  // Stepper & Preset buttons for Daily Stay
-  function updatePresetChips() {
-    dailyPresetBtns.forEach(pBtn => {
-      const d = parseInt(pBtn.dataset.days, 10);
-      pBtn.classList.toggle('active', d === currentDailyDays);
-    });
-  }
-
-  // Two-way synchronization between Step 3 & Step 4 days input fields
-  function syncDailyDays(val) {
-    let cleanVal = parseInt(val, 10);
-    if (isNaN(cleanVal) || cleanVal < 1) cleanVal = 1;
-    if (cleanVal > 180) cleanVal = 180;
-
-    currentDailyDays = cleanVal;
-    if (dailyDaysInput && parseInt(dailyDaysInput.value, 10) !== cleanVal) {
-      dailyDaysInput.value = cleanVal;
-    }
-    if (rsvDailyDaysInput && parseInt(rsvDailyDaysInput.value, 10) !== cleanVal) {
-      rsvDailyDaysInput.value = cleanVal;
-    }
-    if (dailyDaysLabel) {
-      dailyDaysLabel.textContent = cleanVal === 1 ? 'Day' : 'Days';
-    }
-    updatePresetChips();
-    recalculate();
-  }
-
+  // Direct Number of Days input handler
   if (dailyDaysInput) {
-    dailyDaysInput.addEventListener('input', () => syncDailyDays(dailyDaysInput.value));
-    dailyDaysInput.addEventListener('change', () => syncDailyDays(dailyDaysInput.value));
-  }
-
-  if (rsvDailyDaysInput) {
-    rsvDailyDaysInput.addEventListener('input', () => syncDailyDays(rsvDailyDaysInput.value));
-    rsvDailyDaysInput.addEventListener('change', () => syncDailyDays(rsvDailyDaysInput.value));
-  }
-
-  if (dailyStepDecr) {
-    dailyStepDecr.addEventListener('click', () => {
-      if (currentDailyDays > 1) {
-        syncDailyDays(currentDailyDays - 1);
+    const handleDaysInput = () => {
+      let val = parseInt(dailyDaysInput.value, 10);
+      if (isNaN(val) || val < 1) val = 1;
+      if (val > 180) val = 180;
+      currentDailyDays = val;
+      if (dailyDaysLabel) {
+        dailyDaysLabel.textContent = val === 1 ? 'Day' : 'Days';
       }
+      recalculate();
+    };
+
+    dailyDaysInput.addEventListener('input', handleDaysInput);
+    dailyDaysInput.addEventListener('change', () => {
+      dailyDaysInput.value = currentDailyDays;
+      handleDaysInput();
     });
   }
-
-  if (dailyStepIncr) {
-    dailyStepIncr.addEventListener('click', () => {
-      if (currentDailyDays < 180) {
-        syncDailyDays(currentDailyDays + 1);
-      }
-    });
-  }
-
-  dailyPresetBtns.forEach(pBtn => {
-    pBtn.addEventListener('click', () => {
-      const d = parseInt(pBtn.dataset.days, 10);
-      if (d) {
-        syncDailyDays(d);
-      }
-    });
-  });
 
   if (preferredFloorSelect) {
     preferredFloorSelect.addEventListener('change', () => {
