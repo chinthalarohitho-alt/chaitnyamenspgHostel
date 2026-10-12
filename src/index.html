@@ -929,63 +929,78 @@
                     </div>
                   </div>
 
-                  <!-- Government ID Type -->
-                  <div class="rsv-field">
-                    <label for="guestIdType" class="rsv-label">Government ID Type <span class="req">*</span></label>
-                    <div class="rsv-input-wrap">
-                      <i class="fa-solid fa-id-card"></i>
-                      <select id="guestIdType" name="guestIdType" class="rsv-input rsv-select" required>
-                        <option value="Aadhaar Card" selected>Aadhaar Card</option>
-                        <option value="PAN Card">PAN Card</option>
-                        <option value="Driving License">Driving License</option>
-                        <option value="Voter ID">Voter ID</option>
-                        <option value="Passport">Passport</option>
-                      </select>
-                      <span class="rsv-select-chevron"><i class="fa-solid fa-chevron-down"></i></span>
-                    </div>
-                  </div>
-
-                  <!-- Government ID Number -->
-                  <div class="rsv-field">
-                    <label for="guestIdNumber" class="rsv-label">Government ID Number <span class="req">*</span></label>
-                    <div class="rsv-input-wrap">
-                      <i class="fa-solid fa-hashtag"></i>
-                      <input type="text" id="guestIdNumber" name="guestIdNumber" class="rsv-input"
-                             placeholder="Enter 12-digit Aadhaar number" required autocomplete="off" spellcheck="false">
-                    </div>
-                    <span class="field-error" id="idNumberError">Please enter a valid government ID number.</span>
-                  </div>
-
-                  <!-- Upload ID Proof Document (Full Width) -->
-                  <div class="rsv-field rsv-field-full">
-                    <label for="guestIdFile" class="rsv-label">Upload Government ID Photo / Document <span class="req">*</span> <span class="rsv-label-hint">(Clear, legible photo or PDF)</span></label>
-                    <div class="id-upload-dropzone" id="idUploadDropzone">
-                      <input type="file" id="guestIdFile" name="guestIdFile" accept="image/jpeg,image/png,image/webp,.pdf" class="id-file-input" required>
-                      <div class="id-upload-content" id="idUploadPrompt">
-                        <i class="fa-solid fa-cloud-arrow-up id-upload-icon"></i>
-                        <div class="id-upload-texts">
-                          <span class="id-upload-title">Click to upload or drag &amp; drop document</span>
-                          <span class="id-upload-desc">Photo (JPG, PNG) or Document (PDF) &bull; Max 5MB &bull; Min 300x200px</span>
-                        </div>
+                  <!-- Unified Government ID Verification Box -->
+                  <div class="rsv-field rsv-field-full rsv-id-unified-box">
+                    <div class="rsv-id-box-header">
+                      <div class="rsv-id-box-title">
+                        <i class="fa-solid fa-id-card"></i>
+                        <span>Government ID Verification</span>
+                        <span class="req">*</span>
                       </div>
-                      <div class="id-file-preview" id="idFilePreview" style="display: none;">
-                        <div class="id-preview-thumb-wrap">
-                          <img id="idPreviewImg" src="" alt="ID Preview" style="display: none;">
-                          <i class="fa-solid fa-file-pdf id-pdf-icon" id="idPreviewPdfIcon" style="display: none;"></i>
-                        </div>
-                        <div class="id-file-info">
-                          <span class="id-file-name" id="idFileName">document.jpg</span>
-                          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <span class="id-file-size" id="idFileSize">1.2 MB</span>
-                            <span class="id-verified-pill" id="idVerifiedPill"><i class="fa-solid fa-paperclip"></i> Document Attached</span>
+                      <span class="rsv-id-box-hint">Required for official PG move-in registry</span>
+                    </div>
+
+                    <div class="rsv-id-box-grid">
+                      <!-- Left Column: ID Credentials -->
+                      <div class="rsv-id-meta-col">
+                        <div class="rsv-id-subfield">
+                          <label for="guestIdType" class="rsv-id-sublabel">Document Type <span class="req">*</span></label>
+                          <div class="rsv-input-wrap">
+                            <i class="fa-solid fa-id-card"></i>
+                            <select id="guestIdType" name="guestIdType" class="rsv-input rsv-select" required>
+                              <option value="Aadhaar Card" selected>Aadhaar Card</option>
+                              <option value="PAN Card">PAN Card</option>
+                              <option value="Driving License">Driving License</option>
+                              <option value="Voter ID">Voter ID</option>
+                              <option value="Passport">Passport</option>
+                            </select>
+                            <span class="rsv-select-chevron"><i class="fa-solid fa-chevron-down"></i></span>
                           </div>
                         </div>
-                        <button type="button" class="id-file-remove-btn" id="removeIdFileBtn" title="Remove file">
-                          <i class="fa-solid fa-trash-can"></i>
-                        </button>
+
+                        <div class="rsv-id-subfield" id="idNumberWrap">
+                          <label for="guestIdNumber" class="rsv-id-sublabel">ID Number <span class="req">*</span></label>
+                          <div class="rsv-input-wrap">
+                            <i class="fa-solid fa-hashtag"></i>
+                            <input type="text" id="guestIdNumber" name="guestIdNumber" class="rsv-input"
+                                   placeholder="Enter 12-digit Aadhaar number" required autocomplete="off" spellcheck="false">
+                          </div>
+                          <span class="field-error" id="idNumberError">Please enter a valid government ID number.</span>
+                        </div>
+                      </div>
+
+                      <!-- Right Column: Document Photo Upload Dropzone -->
+                      <div class="rsv-id-upload-col">
+                        <label for="guestIdFile" class="rsv-id-sublabel">Upload Photo / PDF <span class="req">*</span></label>
+                        <div class="id-upload-dropzone" id="idUploadDropzone">
+                          <input type="file" id="guestIdFile" name="guestIdFile" accept="image/jpeg,image/png,image/webp,.pdf" class="id-file-input" required>
+                          <div class="id-upload-content" id="idUploadPrompt">
+                            <i class="fa-solid fa-cloud-arrow-up id-upload-icon"></i>
+                            <div class="id-upload-texts">
+                              <span class="id-upload-title">Click to upload or drag &amp; drop</span>
+                              <span class="id-upload-desc">Photo (JPG, PNG) or PDF &bull; Max 5MB</span>
+                            </div>
+                          </div>
+                          <div class="id-file-preview" id="idFilePreview" style="display: none;">
+                            <div class="id-preview-thumb-wrap">
+                              <img id="idPreviewImg" src="" alt="ID Preview" style="display: none;">
+                              <i class="fa-solid fa-file-pdf id-pdf-icon" id="idPreviewPdfIcon" style="display: none;"></i>
+                            </div>
+                            <div class="id-file-info">
+                              <span class="id-file-name" id="idFileName">document.jpg</span>
+                              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                <span class="id-file-size" id="idFileSize">1.2 MB</span>
+                                <span class="id-verified-pill" id="idVerifiedPill"><i class="fa-solid fa-paperclip"></i> Attached</span>
+                              </div>
+                            </div>
+                            <button type="button" class="id-file-remove-btn" id="removeIdFileBtn" title="Remove file">
+                              <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                          </div>
+                        </div>
+                        <span class="field-error" id="idFileError">Please upload a clear, legible photo or PDF of your government ID.</span>
                       </div>
                     </div>
-                    <span class="field-error" id="idFileError">Please upload a clear, legible photo or PDF of your government ID.</span>
                   </div>
                 </div>
               </div>
