@@ -2792,9 +2792,10 @@ select.rsv-input,
 
 .rsv-id-box-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
   align-items: stretch;
+  width: 100%;
 }
 
 .rsv-id-meta-col {
@@ -2802,23 +2803,36 @@ select.rsv-input,
   flex-direction: column;
   gap: 12px;
   justify-content: space-between;
+  min-width: 0;
+  width: 100%;
 }
 
 .rsv-id-subfield {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  min-width: 0;
+  width: 100%;
+}
+
+.rsv-id-subfield .rsv-input-wrap {
+  position: relative;
+  min-width: 0;
+  width: 100%;
 }
 
 .rsv-id-subfield .rsv-input {
-  font-size: 0.86rem;
-  padding: 10px 12px 10px 34px !important;
+  font-size: 0.85rem;
+  padding: 10px 10px 10px 34px !important;
   letter-spacing: 0.01em;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .rsv-id-subfield .rsv-input-wrap > i {
   left: 12px;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
 }
 
 .rsv-id-sublabel {
@@ -2831,6 +2845,8 @@ select.rsv-input,
   display: flex;
   flex-direction: column;
   gap: 5px;
+  min-width: 0;
+  width: 100%;
 }
 
 .rsv-id-upload-col .id-upload-dropzone {
@@ -2840,12 +2856,14 @@ select.rsv-input,
   align-items: center;
   justify-content: center;
   margin: 0;
+  min-width: 0;
+  width: 100%;
   box-sizing: border-box;
 }
 
 @media (max-width: 680px) {
   .rsv-id-box-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
   }
   .rsv-id-box-header {
@@ -2944,18 +2962,24 @@ select.rsv-input,
 .id-file-preview {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  padding: 10px 14px;
+  padding: 8px 10px;
   position: relative;
   z-index: 3;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .id-preview-thumb-wrap {
-  width: 48px;
-  height: 48px;
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
   border-radius: 6px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.25);
@@ -2972,7 +2996,7 @@ select.rsv-input,
 }
 
 .id-pdf-icon {
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   color: #ef4444;
 }
 
@@ -2982,15 +3006,18 @@ select.rsv-input,
   gap: 2px;
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .id-file-name {
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   font-weight: 600;
   color: var(--text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: block;
+  max-width: 100%;
 }
 
 .id-file-size {
