@@ -50,6 +50,79 @@ export function formatRs(amount) {
   return 'Rs. 0';
 }
 
+function getOrdinal(n) {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+/**
+ * Calculates the exact stay period starting from the move-in date.
+ * If user booked on the 14th, the count starts from the 14th (Day 1 = 14th), NOT 15th.
+ */
+export function calculateStayPeriod(startDateStr, durationStr, isDaily = false, durCount = 1) {
+  if (!startDateStr || startDateStr === '-') return null;
+
+  let d = null;
+  const m = String(startDateStr).match(/^(\d{1,2})\s+([A-Za-z]+),?\s+(\d{4})/);
+  if (m) {
+    const day = parseInt(m[1], 10);
+    const monthStr = m[2].toLowerCase().substring(0, 3);
+    const year = parseInt(m[3], 10);
+    const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+    const month = months[monthStr] !== undefined ? months[monthStr] : 0;
+    d = new Date(year, month, day);
+  } else {
+    const parsed = new Date(startDateStr);
+    if (!isNaN(parsed.getTime())) {
+      d = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+    }
+  }
+
+  if (!d) return null;
+
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const fmt = (dt) => `${dt.getDate()} ${monthNames[dt.getMonth()]}, ${dt.getFullYear()}`;
+
+  const durStr = String(durationStr || '1 Month');
+  const daily = Boolean(isDaily || durStr.toLowerCase().includes('day'));
+
+  if (daily) {
+    const days = parseInt(durCount || durStr.replace(/[^\d]/g, ''), 10) || 1;
+    // Count starts directly on the move-in date (14th = Day 1).
+    // For 1 day: 14th only.
+    // For N days: 14th through 14 + (N - 1)th.
+    const startFmt = fmt(d);
+    if (days <= 1) {
+      return {
+        startDate: startFmt,
+        endDate: startFmt,
+        totalDays: 1,
+        displayText: `${startFmt} (1 Day - starts ${getOrdinal(d.getDate())})`
+      };
+    }
+    const end = new Date(d.getFullYear(), d.getMonth(), d.getDate() + (days - 1));
+    const endFmt = fmt(end);
+    return {
+      startDate: startFmt,
+      endDate: endFmt,
+      totalDays: days,
+      displayText: `${startFmt} to ${endFmt} (${days} Days - starts ${getOrdinal(d.getDate())})`
+    };
+  } else {
+    const months = parseInt(durCount || durStr.replace(/[^\d]/g, ''), 10) || 1;
+    const startFmt = fmt(d);
+    const end = new Date(d.getFullYear(), d.getMonth() + months, d.getDate() - 1);
+    const endFmt = fmt(end);
+    return {
+      startDate: startFmt,
+      endDate: endFmt,
+      totalMonths: months,
+      displayText: `${startFmt} to ${endFmt} (${months} Month${months > 1 ? 's' : ''} - starts ${getOrdinal(d.getDate())})`
+    };
+  }
+}
+
 /**
  * Calculate accurate pricing breakdown using manager-configured prices
  */
@@ -153,6 +226,13 @@ export function calculateInvoicePricing(b = {}, p = {}) {
     if (!isNaN(rawP) && rawP > 0) finalMoveIn = rawP;
   }
 
+  const stayPeriodInfo = calculateStayPeriod(
+    b.date || b.move_in_date,
+    durStr,
+    isDaily,
+    isDaily ? durDays : durMonths
+  );
+
   return {
     baseRent,
     acCost,
@@ -165,7 +245,8 @@ export function calculateInvoicePricing(b = {}, p = {}) {
     termSavings: termSavings > 0 ? termSavings : 0,
     monthlyRent: finalMonthly,
     securityDeposit: finalDeposit,
-    moveInTotal: finalMoveIn
+    moveInTotal: finalMoveIn,
+    stayPeriod: stayPeriodInfo ? stayPeriodInfo.displayText : ''
   };
 }
 
@@ -367,6 +448,13 @@ export async function buildInvoicePdfDoc(b, h = {}) {
       label: 'Intended Stay Duration',
       val: b.duration || `${calc.durDays} Day${calc.durDays > 1 ? 's' : ''} (Daily Stay)`
     });
+    if (calc.stayPeriod) {
+      tableRows.push({
+        label: 'Stay Period Covered',
+        val: calc.stayPeriod,
+        note: 'Count starts directly from move-in date'
+      });
+    }
     tableRows.push({
       label: 'Daily Tariff Rate',
       val: 'Rs. ' + calc.dailyRate.toLocaleString('en-IN') + ' / day'
@@ -385,6 +473,13 @@ export async function buildInvoicePdfDoc(b, h = {}) {
       label: 'Intended Stay Duration',
       val: b.duration || (calc.durMonths + ' Month' + (calc.durMonths > 1 ? 's' : ''))
     });
+    if (calc.stayPeriod) {
+      tableRows.push({
+        label: 'Stay Period Covered',
+        val: calc.stayPeriod,
+        note: 'Count starts directly from move-in date'
+      });
+    }
     tableRows.push({
       label: 'Monthly Subtotal (Rent)',
       val: 'Rs. ' + calc.monthlyRent.toLocaleString('en-IN') + ' / mo'

@@ -1861,6 +1861,24 @@ ul {
   font-weight: 700;
 }
 
+.daily-stay-note {
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  background: rgba(201, 164, 92, 0.08);
+  border-radius: 8px;
+  border-left: 3px solid #c9a45c;
+  line-height: 1.4;
+}
+
+.daily-stay-note strong {
+  color: #f8fafc;
+}
+
 /* ===================================================================
    11. CALCULATOR SUMMARY PANEL & STICKY BOOKING CARD (REDESIGNED)
    =================================================================== */

@@ -26,7 +26,7 @@ import heroExteriorUrl from './assets/hostel-exterior.jpg';
 
 import { mountLottie, destroyLottie } from './lottie-anim.js';
 import { buildUpiUri, renderQr, submitUtr, setBookingEmail } from './upi-token.js';
-import { downloadInvoicePdf, calculateInvoicePricing } from './invoice-pdf.js';
+import { downloadInvoicePdf, calculateInvoicePricing, calculateStayPeriod } from './invoice-pdf.js';
 import {
   validateUpiId, validateUtr, validateEmail, validatePhone,
   validateWhatsApp, validateMoney, validatePercent, markField, validatePhotoUrl} from './validate.js';
@@ -431,6 +431,7 @@ function initConfirmSteps() {
         `🛏️ Room: ${currentBookingContext.room}\n` +
         `🏢 Preferred Floor: ${currentBookingContext.floor}\n` +
         `📅 Move-in Date: ${currentBookingContext.date}\n` +
+        (currentBookingContext.stay_period ? `🗓️ Stay Period: ${currentBookingContext.stay_period}\n` : '') +
         `⏳ Stay Duration: ${currentBookingContext.duration}\n` +
         `💳 Amount Submitted: ${payDisplay} (Pending manager verification — not considered paid until verified)\n` +
         `🔢 UPI Ref (UTR): ${check.value}\n\n` +
@@ -3654,6 +3655,8 @@ function initRoomCalculator() {
     const formatInr = (n) => '₹' + n.toLocaleString('en-IN');
 
     // === Day-Wise Stay Calculation ===
+    const moveInInput = (document.getElementById('moveInDateDisplay')?.value || document.getElementById('moveInDate')?.value || '').trim();
+
     if (isDailyStay) {
       const dailyBase = Number(cfg?.pricing?.dailyRate) || 350;
       const dailyAc = Number(cfg?.pricing?.dailyAcAdd) || 100;
@@ -3663,6 +3666,19 @@ function initRoomCalculator() {
       const securityDeposit = 0; // Deposit is completely waived for day-wise stay!
       const initialMoveIn = stayTotal;
 
+      const stayPeriodInfo = moveInInput
+        ? calculateStayPeriod(moveInInput, `${currentDailyDays} Days`, true, currentDailyDays)
+        : null;
+
+      const dailyHintEl = document.getElementById('dailyStayRangeHint');
+      if (dailyHintEl) {
+        if (stayPeriodInfo) {
+          dailyHintEl.innerHTML = `<i class="fa-solid fa-calendar-check" style="color:#c9a45c;"></i> Stay Dates: <strong>${stayPeriodInfo.displayText}</strong>`;
+        } else {
+          dailyHintEl.innerHTML = `<i class="fa-solid fa-circle-info"></i> Stay count starts directly from your move-in date (Day 1).`;
+        }
+      }
+
       if (dispBaseRent) dispBaseRent.textContent = `${formatInr(dailyBase)} / day`;
       if (dispAcCost) dispAcCost.textContent = acCost > 0 ? `+ ${formatInr(acCost)} / day` : '+ ₹0';
       if (dispSubtotalLabel) dispSubtotalLabel.textContent = `Stay Tariff (${currentDailyDays}d)`;
@@ -3671,7 +3687,11 @@ function initRoomCalculator() {
       if (dispStayTotalRow) dispStayTotalRow.style.display = 'none';
       if (dispSecurityDeposit) dispSecurityDeposit.textContent = '₹0 (Waived)';
       if (dispMoveInTotal) dispMoveInTotal.textContent = formatInr(initialMoveIn);
-      if (dispMoveInScope) dispMoveInScope.textContent = `${currentDailyDays} day${currentDailyDays > 1 ? 's' : ''} stay tariff (no deposit required)`;
+      if (dispMoveInScope) {
+        dispMoveInScope.textContent = stayPeriodInfo
+          ? `${currentDailyDays} day${currentDailyDays > 1 ? 's' : ''} stay (${stayPeriodInfo.displayText})`
+          : `${currentDailyDays} day${currentDailyDays > 1 ? 's' : ''} stay (count starts on move-in day, no deposit)`;
+      }
 
       const activeRoomName = roomNames[currentRoom] || '2 Sharing';
       const climateText = isAc ? 'AC' : 'Non-AC';
@@ -3701,15 +3721,25 @@ function initRoomCalculator() {
     const stayTotal = effectiveMonthly * currentDurationMonths;
     const initialMoveIn = stayTotal + securityDeposit;
 
+    const monthStayPeriodInfo = moveInInput
+      ? calculateStayPeriod(moveInInput, `${currentDurationMonths} Months`, false, currentDurationMonths)
+      : null;
+
     if (dispBaseRent) dispBaseRent.textContent = formatInr(currentBase);
     if (dispAcCost) dispAcCost.textContent = acCost > 0 ? `+ ${formatInr(acCost)}` : '+ ₹0';
     if (dispSubtotalLabel) dispSubtotalLabel.textContent = 'Monthly Subtotal';
     
     if (dispStayTotalRow) dispStayTotalRow.style.display = 'none';
     if (dispMoveInScope) {
-      dispMoveInScope.textContent = currentDurationMonths > 1
-        ? `${currentDurationMonths} months' rent + deposit, paid up front`
-        : "First month's rent + deposit";
+      if (monthStayPeriodInfo) {
+        dispMoveInScope.textContent = currentDurationMonths > 1
+          ? `${currentDurationMonths} months' stay (${monthStayPeriodInfo.displayText})`
+          : `First month's stay (${monthStayPeriodInfo.displayText})`;
+      } else {
+        dispMoveInScope.textContent = currentDurationMonths > 1
+          ? `${currentDurationMonths} months' rent + deposit, paid up front`
+          : "First month's rent + deposit (starts on move-in day)";
+      }
     }
 
     if (dispDiscountRow && dispDiscountVal) {
@@ -3869,6 +3899,11 @@ function initRoomCalculator() {
 
   // Expose current selection getters for booking submission
   window.getCalculatorSelection = function() {
+    const moveInInput = (document.getElementById('moveInDateDisplay')?.value || document.getElementById('moveInDate')?.value || '').trim();
+    const stayPeriodInfo = moveInInput
+      ? calculateStayPeriod(moveInInput, isDailyStay ? `${currentDailyDays} Days` : (durationNames[currentDurationMonths] || '1 Month'), isDailyStay, isDailyStay ? currentDailyDays : currentDurationMonths)
+      : null;
+
     return {
       roomKey: currentRoom,
       roomName: roomNames[currentRoom] || 'Double Sharing',
@@ -3878,6 +3913,7 @@ function initRoomCalculator() {
         : (durationNames[currentDurationMonths] || '1 Month'),
       isDaily: isDailyStay,
       dailyDays: isDailyStay ? currentDailyDays : null,
+      stayPeriod: stayPeriodInfo ? stayPeriodInfo.displayText : '',
       effectiveMonthly: dispMonthlyTotal ? dispMonthlyTotal.textContent : '₹8,500'
     };
   };
@@ -4640,6 +4676,10 @@ function initBookingForm() {
     const moveInTotalNum = parseInt(moveInTotalStr.replace(/[^\d]/g, ''), 10) || bookingPricing.moveInTotal;
     const secDepositNum = parseInt(secDepositStr.replace(/[^\d]/g, ''), 10) || bookingPricing.securityDeposit;
 
+    const chosenMoveInDate = (moveInDateDisplay ? moveInDateDisplay.value : moveInDate.value) || '';
+    const stayPeriodObj = calculateStayPeriod(chosenMoveInDate, sel.duration, sel.isDaily, sel.dailyDays);
+    const stayPeriodDisplay = stayPeriodObj ? stayPeriodObj.displayText : sel.duration;
+
     const newBooking = {
       ref: refId,
       name: fullName.value.trim(),
@@ -4647,8 +4687,9 @@ function initBookingForm() {
       floor: chosenFloor,
       room: `${sel.roomName} (${sel.climate})`,
       climate: sel.climate,
-      date: moveInDateDisplay ? moveInDateDisplay.value : moveInDate.value,
+      date: chosenMoveInDate,
       duration: sel.duration,
+      stay_period: stayPeriodDisplay,
       is_daily: !!sel.isDaily,
       daily_days: sel.dailyDays || null,
       workplace: workplace ? workplace.value.trim() : '',
@@ -4702,7 +4743,9 @@ function initBookingForm() {
     if (modalPhone) modalPhone.textContent = cleanPhone;
     if (modalRoom) modalRoom.textContent = `${sel.roomName} (${chosenFloor})`;
     if (modalClimate) modalClimate.textContent = sel.climate;
-    if (modalDate) modalDate.textContent = moveInDateDisplay ? moveInDateDisplay.value : moveInDate.value;
+    if (modalDate) modalDate.textContent = chosenMoveInDate;
+    const modalStayPeriod = document.getElementById('modalStayPeriod');
+    if (modalStayPeriod) modalStayPeriod.textContent = stayPeriodDisplay;
     const modalIdProof = document.getElementById('modalIdProof');
     if (modalIdProof) {
       const displayNum = idTypeVal === 'Aadhaar Card' && newBooking.id_number.length === 12
@@ -4722,7 +4765,8 @@ function initBookingForm() {
       `🪪 Govt ID: ${newBooking.id_type} (${newBooking.id_number}) [Doc Attached]\n` +
       `🛏️ Room: ${sel.roomName} (${sel.climate})\n` +
       `🏢 Preferred Floor: ${chosenFloor}\n` +
-      `📅 Move-in Date: ${moveInDateDisplay ? moveInDateDisplay.value : moveInDate.value}\n` +
+      `📅 Move-in Date: ${chosenMoveInDate}\n` +
+      `🗓️ Stay Period: ${stayPeriodDisplay}\n` +
       `⏳ Stay Duration: ${sel.duration}\n\n` +
       `Please confirm bed availability and share room photos.`
     );
@@ -4921,10 +4965,15 @@ function initCustomDatePicker() {
     if (displayInput) {
       displayInput.value = disp;
       displayInput.classList.remove('is-invalid');
+      displayInput.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     const dateError = document.getElementById('dateError');
     if (dateError) dateError.style.display = 'none';
+
+    if (typeof window.updateEstimatorFromActive === 'function') {
+      window.updateEstimatorFromActive();
+    }
 
     renderCalendar();
     closePopover();
@@ -5149,7 +5198,12 @@ function initCustomDatePicker() {
     }
   });
 
-  renderCalendar();
+  // Default to today so stay count starts directly on move-in day
+  if (hiddenInput && !hiddenInput.value && displayInput && !displayInput.value) {
+    selectDate(minDate);
+  } else {
+    renderCalendar();
+  }
 }
 
 /* ===================================================================

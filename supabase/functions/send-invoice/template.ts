@@ -21,6 +21,7 @@ export interface Booking {
   monthly_rent?: string | null;
   security_deposit?: string | null;
   payable_move_in?: string | null;
+  stay_period?: string | null;
 }
 
 export interface Hostel {
@@ -63,6 +64,7 @@ export function invoiceText(b: Booking, h: Hostel, forManager = false, hasPdf = 
     b.room ? `Room: ${b.room}` : ``,
     b.floor ? `Preferred floor: ${b.floor}` : ``,
     b.move_in_date ? `Move-in: ${b.move_in_date}` : ``,
+    b.stay_period ? `Stay Period: ${b.stay_period}` : ``,
     b.duration ? `Stay: ${b.duration}` : ``,
     b.monthly_rent ? `Monthly Rent: ${b.monthly_rent} / mo` : ``,
     b.security_deposit ? `Security Deposit: ${b.security_deposit}` : ``,
@@ -153,6 +155,7 @@ export function invoiceHtml(b: Booking, h: Hostel, forManager = false, hasPdf = 
               ${b.room ? row("Room", b.room) : ""}
               ${b.floor ? row("Preferred floor", b.floor) : ""}
               ${b.move_in_date ? row("Move-in date", b.move_in_date) : ""}
+              ${b.stay_period ? row("Stay period", b.stay_period) : ""}
               ${b.duration ? row("Stay duration", b.duration) : ""}
               ${b.monthly_rent ? row("Monthly Rent", `${b.monthly_rent} / mo`) : ""}
               ${b.security_deposit ? row("Security Deposit", b.security_deposit) : ""}

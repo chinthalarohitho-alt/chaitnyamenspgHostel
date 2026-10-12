@@ -142,12 +142,33 @@ export async function buildInvoicePdf(
   }
   const isAc = roomStr.includes("ac") && !roomStr.includes("non");
   const monthlyRent = baseRent + (isAc ? acAdd : 0);
-  const secDeposit = (p.securityDeposit !== undefined && p.securityDeposit !== null)
-    ? Number(p.securityDeposit)
-    : 5400;
   const durStr = String(b.duration ?? "1 Month");
-  const durMonths = parseInt(durStr.replace(/[^\d]/g, ""), 10) || 1;
-  const moveInTotal = (monthlyRent * durMonths) + secDeposit;
+  const isDaily = durStr.toLowerCase().includes("day");
+  let moveInTotal = 0;
+  let rentLabel = "Monthly Rent";
+  let rentValue = "";
+  let depositValue = "";
+
+  if (isDaily) {
+    const durDays = parseInt(durStr.replace(/[^\d]/g, ""), 10) || 1;
+    const dailyBase = Number(p.dailyRate) || 350;
+    const dailyAc = Number(p.dailyAcAdd) || 100;
+    const dailyRate = dailyBase + (isAc ? dailyAc : 0);
+    const stayTariff = dailyRate * durDays;
+    moveInTotal = stayTariff;
+    rentLabel = "Daily Tariff Rate";
+    rentValue = `Rs. ${dailyRate.toLocaleString("en-IN")} / day`;
+    depositValue = "Rs. 0 (Waived for daily stay)";
+  } else {
+    const durMonths = parseInt(durStr.replace(/[^\d]/g, ""), 10) || 1;
+    const secDeposit = (p.securityDeposit !== undefined && p.securityDeposit !== null)
+      ? Number(p.securityDeposit)
+      : 5400;
+    moveInTotal = (monthlyRent * durMonths) + secDeposit;
+    rentLabel = "Monthly Rent";
+    rentValue = `Rs. ${monthlyRent.toLocaleString("en-IN")} / mo`;
+    depositValue = `Rs. ${secDeposit.toLocaleString("en-IN")}`;
+  }
 
   // ---------- booking table ----------
   text("DETAILS", M, y, 8.5, bold, NAVY);
@@ -160,11 +181,14 @@ export async function buildInvoicePdf(
     ["Room", b.room ?? "-"],
     ["Preferred floor", b.floor ?? "Any Floor"],
     ["Move-in date", b.move_in_date ?? "-"],
-    ["Stay duration", b.duration ?? "-"],
-    ["Monthly Rent", `Rs. ${monthlyRent.toLocaleString("en-IN")} / mo`],
-    ["Security Deposit", `Rs. ${secDeposit.toLocaleString("en-IN")}`],
-    ["Total Move-In Charges", `Rs. ${moveInTotal.toLocaleString("en-IN")}`],
   ];
+  if (b.stay_period) {
+    rows.push(["Stay period covered", b.stay_period]);
+  }
+  rows.push(["Stay duration", b.duration ?? "-"]);
+  rows.push([rentLabel, rentValue]);
+  rows.push(["Security Deposit", depositValue]);
+  rows.push(["Total Move-In Charges", `Rs. ${moveInTotal.toLocaleString("en-IN")}`]);
   for (const [k, v] of rows) {
     text(k, M, y, 10, reg, CHARCOAL);
     textR(v, A4.w - M, y, 10, bold, CHARCOAL);
