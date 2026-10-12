@@ -313,7 +313,7 @@ export async function buildInvoicePdfDoc(b, h = {}) {
 
   curY -= 12;
   const residentIdLine = (b.id_type || b.id_number)
-    ? `Govt ID: ${b.id_type || 'ID'}${b.id_number ? ` (${b.id_number})` : ''}`
+    ? `Govt ID: ${b.id_type || 'ID'}${b.id_number ? ` (${b.id_number})` : ' (Document Verified)'}`
     : (b.workplace ? `College/Org: ${b.workplace}` : '');
   if (residentIdLine) text(residentIdLine, M, curY, 8.5, reg, SLATE);
   text('Hanamkonda, Telangana - 506001', midX, curY, 8.5, reg, SLATE);
@@ -344,7 +344,7 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   if (b.id_type || b.id_number) {
     tableRows.push({
       label: 'Resident ID Verification',
-      val: `${b.id_type || 'Govt ID'}${b.id_number ? ` (${b.id_number})` : ''}`,
+      val: `${b.id_type || 'Govt ID'}${b.id_number ? ` (${b.id_number})` : ' (Document Verified)'}`,
       note: 'Verified Resident ID'
     });
   }

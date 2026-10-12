@@ -2293,7 +2293,7 @@ function openIdProofModal(b) {
   if (idModalName) idModalName.textContent = b.name || 'Resident';
   if (idModalRef) idModalRef.textContent = b.ref || '-';
   if (idModalType) idModalType.textContent = b.id_type || 'Government ID';
-  if (idModalNumber) idModalNumber.textContent = b.id_number || 'N/A';
+  if (idModalNumber) idModalNumber.textContent = b.id_number || 'Document Uploaded';
 
   const proofUrl = b.id_proof_url || '';
   if (proofUrl) {
@@ -2917,11 +2917,11 @@ function renderEnquiriesTable() {
           <strong>${escapeHtml(b.name || 'Resident')}</strong><br>
           <small style="color:var(--text-muted);">${escapeHtml(b.email || 'No email')}</small><br>
           <small style="color:var(--text-muted); opacity:0.75;">${escapeHtml(b.time || 'Recent')}</small>
-          ${(b.id_type || b.id_number || b.id_proof_url) ? `
+          ${(b.id_type || b.id_proof_url) ? `
             <div style="margin-top:6px; display:flex; flex-direction:column; gap:4px; align-items:flex-start;">
-              ${(b.id_type || b.id_number) ? `
-                <span class="table-id-badge" title="${escapeHtml(b.id_type || 'Govt ID')}: ${escapeHtml(b.id_number || '')}">
-                  <i class="fa-solid fa-id-card"></i> ${escapeHtml(b.id_type || 'ID')}${b.id_number ? ` • ${escapeHtml(b.id_number)}` : ''}
+              ${b.id_type ? `
+                <span class="table-id-badge" title="${escapeHtml(b.id_type)}">
+                  <i class="fa-solid fa-id-card"></i> ${escapeHtml(b.id_type)}${b.id_number ? ` • ${escapeHtml(b.id_number)}` : ''}
                 </span>
               ` : ''}
               ${b.id_proof_url ? `
@@ -3913,8 +3913,6 @@ function initBookingForm() {
 
   // ── Government ID Proof Handling ──
   const guestIdType = document.getElementById('guestIdType');
-  const guestIdNumber = document.getElementById('guestIdNumber');
-  const idNumberError = document.getElementById('idNumberError');
   const guestIdFile = document.getElementById('guestIdFile');
   const idUploadDropzone = document.getElementById('idUploadDropzone');
   const idUploadPrompt = document.getElementById('idUploadPrompt');
@@ -3923,53 +3921,11 @@ function initBookingForm() {
   const idPreviewPdfIcon = document.getElementById('idPreviewPdfIcon');
   const idFileName = document.getElementById('idFileName');
   const idFileSize = document.getElementById('idFileSize');
+  const idVerifiedPill = document.getElementById('idVerifiedPill');
   const removeIdFileBtn = document.getElementById('removeIdFileBtn');
   const idFileError = document.getElementById('idFileError');
 
-  let currentIdProof = null; // { dataUrl: string, name: string, sizeStr: string, isPdf: boolean }
-
-  const updateIdPlaceholder = () => {
-    if (!guestIdType || !guestIdNumber) return;
-    const type = guestIdType.value;
-    if (type === 'Aadhaar Card') {
-      guestIdNumber.placeholder = 'Enter 12-digit Aadhaar number';
-      guestIdNumber.setAttribute('maxlength', '12');
-    } else if (type === 'PAN Card') {
-      guestIdNumber.placeholder = 'Enter 10-digit PAN (e.g. ABCDE1234F)';
-      guestIdNumber.setAttribute('maxlength', '10');
-    } else if (type === 'Driving License') {
-      guestIdNumber.placeholder = 'Enter Driving License number';
-      guestIdNumber.removeAttribute('maxlength');
-    } else if (type === 'Voter ID') {
-      guestIdNumber.placeholder = 'Enter Voter ID (EPIC) number';
-      guestIdNumber.removeAttribute('maxlength');
-    } else if (type === 'Passport') {
-      guestIdNumber.placeholder = 'Enter Passport number';
-      guestIdNumber.removeAttribute('maxlength');
-    }
-    guestIdNumber.classList.remove('is-invalid');
-    if (idNumberError) idNumberError.style.display = 'none';
-  };
-
-  if (guestIdType) {
-    guestIdType.addEventListener('change', updateIdPlaceholder);
-  }
-
-  if (guestIdNumber) {
-    guestIdNumber.addEventListener('input', () => {
-      const type = guestIdType ? guestIdType.value : 'Aadhaar Card';
-      if (type === 'Aadhaar Card') {
-        const clean = guestIdNumber.value.replace(/\D/g, '').slice(0, 12);
-        guestIdNumber.value = clean;
-      } else if (type === 'PAN Card') {
-        guestIdNumber.value = guestIdNumber.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
-      }
-      if (guestIdNumber.value.trim().length > 0) {
-        guestIdNumber.classList.remove('is-invalid');
-        if (idNumberError) idNumberError.style.display = 'none';
-      }
-    });
-  }
+  let currentIdProof = null; // { dataUrl: string, name: string, sizeStr: string, isPdf: boolean, verified: boolean }
 
   function compressImageToDataUrl(file, maxWidth = 1200, quality = 0.75) {
     return new Promise((resolve, reject) => {
@@ -4010,16 +3966,91 @@ function initBookingForm() {
 
   async function handleFileSelected(file) {
     if (!file) return;
+
+    // 1. Format check: Only images or PDF
+    const validImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    const isImage = validImageTypes.includes(file.type) || /\.(jpe?g|png|webp)$/i.test(file.name);
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+
+    if (!isImage && !isPdf) {
+      if (idFileError) {
+        idFileError.textContent = 'Invalid file format. Please upload a clear photo (JPG, PNG) or PDF of your Government ID.';
+        idFileError.style.display = 'flex';
+      }
+      if (idUploadDropzone) idUploadDropzone.classList.add('is-invalid');
+      if (guestIdFile) guestIdFile.value = '';
+      return;
+    }
+
+    // 2. Minimum size check (must be at least 15KB to avoid blank or corrupted files)
+    if (file.size < 15 * 1024) {
+      if (idFileError) {
+        idFileError.textContent = 'Uploaded file is too small or blank (under 15KB). Please upload a clear, legible photo of your ID.';
+        idFileError.style.display = 'flex';
+      }
+      if (idUploadDropzone) idUploadDropzone.classList.add('is-invalid');
+      if (guestIdFile) guestIdFile.value = '';
+      return;
+    }
+
+    // 3. Maximum size check (5MB)
     if (file.size > 5 * 1024 * 1024) {
       if (idFileError) {
         idFileError.textContent = 'File exceeds 5MB size limit. Please upload a smaller photo or PDF.';
         idFileError.style.display = 'flex';
       }
       if (idUploadDropzone) idUploadDropzone.classList.add('is-invalid');
+      if (guestIdFile) guestIdFile.value = '';
       return;
     }
 
-    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    // 4. Resolution check for images (minimum 280x180 px for legibility)
+    if (isImage) {
+      const dimensions = await new Promise((resolve) => {
+        const tempReader = new FileReader();
+        tempReader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => resolve({ width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
+          img.onerror = () => resolve(null);
+          img.src = e.target.result;
+        };
+        tempReader.onerror = () => resolve(null);
+        tempReader.readAsDataURL(file);
+      });
+
+      if (!dimensions) {
+        if (idFileError) {
+          idFileError.textContent = 'Unable to decode image. Please upload a valid JPG or PNG photo.';
+          idFileError.style.display = 'flex';
+        }
+        if (idUploadDropzone) idUploadDropzone.classList.add('is-invalid');
+        if (guestIdFile) guestIdFile.value = '';
+        return;
+      }
+
+      const { width, height } = dimensions;
+      if (width < 280 || height < 180) {
+        if (idFileError) {
+          idFileError.textContent = `Photo resolution is too low (${width}x${height}px). Please upload a clear, legible photo of at least 300x200 pixels.`;
+          idFileError.style.display = 'flex';
+        }
+        if (idUploadDropzone) idUploadDropzone.classList.add('is-invalid');
+        if (guestIdFile) guestIdFile.value = '';
+        return;
+      }
+
+      const ratio = Math.max(width, height) / Math.min(width, height);
+      if (ratio > 4.5) {
+        if (idFileError) {
+          idFileError.textContent = 'The uploaded image aspect ratio is irregular. Please upload a clear photo of your ID card.';
+          idFileError.style.display = 'flex';
+        }
+        if (idUploadDropzone) idUploadDropzone.classList.add('is-invalid');
+        if (guestIdFile) guestIdFile.value = '';
+        return;
+      }
+    }
+
     try {
       let dataUrl = '';
       if (isPdf) {
@@ -4037,11 +4068,13 @@ function initBookingForm() {
         dataUrl,
         name: file.name,
         sizeStr: formatFileSize(file.size),
-        isPdf
+        isPdf,
+        verified: true
       };
 
       if (idFileName) idFileName.textContent = file.name;
       if (idFileSize) idFileSize.textContent = formatFileSize(file.size);
+      if (idVerifiedPill) idVerifiedPill.style.display = 'inline-flex';
 
       if (isPdf) {
         if (idPreviewImg) idPreviewImg.style.display = 'none';
@@ -4193,48 +4226,11 @@ function initBookingForm() {
       }
     }
 
-    // 4. Government ID check
-    const idTypeVal = guestIdType ? guestIdType.value : 'Aadhaar Card';
-    const idNumVal = guestIdNumber ? guestIdNumber.value.trim() : '';
-
-    if (!idNumVal) {
-      if (guestIdNumber) guestIdNumber.classList.add('is-invalid');
-      if (idNumberError) {
-        idNumberError.textContent = `Please enter your ${idTypeVal} number.`;
-        idNumberError.style.display = 'flex';
-      }
-      isValid = false;
-    } else if (idTypeVal === 'Aadhaar Card' && idNumVal.replace(/\D/g, '').length !== 12) {
-      if (guestIdNumber) guestIdNumber.classList.add('is-invalid');
-      if (idNumberError) {
-        idNumberError.textContent = 'Please enter a valid 12-digit Aadhaar card number.';
-        idNumberError.style.display = 'flex';
-      }
-      isValid = false;
-    } else if (idTypeVal === 'PAN Card' && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(idNumVal)) {
-      if (guestIdNumber) guestIdNumber.classList.add('is-invalid');
-      if (idNumberError) {
-        idNumberError.textContent = 'Please enter a valid 10-character PAN (e.g. ABCDE1234F).';
-        idNumberError.style.display = 'flex';
-      }
-      isValid = false;
-    } else if (idNumVal.length < 3) {
-      if (guestIdNumber) guestIdNumber.classList.add('is-invalid');
-      if (idNumberError) {
-        idNumberError.textContent = 'Please enter a valid ID number.';
-        idNumberError.style.display = 'flex';
-      }
-      isValid = false;
-    } else {
-      if (guestIdNumber) guestIdNumber.classList.remove('is-invalid');
-      if (idNumberError) idNumberError.style.display = 'none';
-    }
-
-    // 5. Government ID proof document check
+    // 4. Government ID proof document check
     if (!currentIdProof || !currentIdProof.dataUrl) {
       if (idUploadDropzone) idUploadDropzone.classList.add('is-invalid');
       if (idFileError) {
-        idFileError.textContent = 'Please upload a photo or PDF of your government ID.';
+        idFileError.textContent = 'Please upload a clear, legible photo or PDF of your government ID.';
         idFileError.style.display = 'flex';
       }
       isValid = false;
@@ -4297,8 +4293,7 @@ function initBookingForm() {
       duration: sel.duration,
       workplace: workplace ? workplace.value.trim() : '',
       email: cleanEmail.toLowerCase(),
-      id_type: idTypeVal,
-      id_number: idNumVal.toUpperCase(),
+      id_type: guestIdType ? guestIdType.value : 'Aadhaar Card',
       id_proof_url: currentIdProof?.dataUrl || '',
       monthly_rent: monthlyTotalStr,
       term_savings: document.getElementById('dispDiscountVal')?.textContent || '',
@@ -4348,7 +4343,7 @@ function initBookingForm() {
     if (modalClimate) modalClimate.textContent = sel.climate;
     if (modalDate) modalDate.textContent = moveInDateDisplay ? moveInDateDisplay.value : moveInDate.value;
     const modalIdProof = document.getElementById('modalIdProof');
-    if (modalIdProof) modalIdProof.textContent = `${newBooking.id_type} (${newBooking.id_number})`;
+    if (modalIdProof) modalIdProof.textContent = `${newBooking.id_type} (Verified Document)`;
     const modalMoveInTotal = document.getElementById('modalMoveInTotal');
     if (modalMoveInTotal) modalMoveInTotal.textContent = moveInTotalStr;
 
@@ -4358,7 +4353,7 @@ function initBookingForm() {
       `📋 Ref Code: ${refId}\n` +
       `👤 Name: ${fullName.value.trim()}\n` +
       `📞 Phone: ${cleanPhone}\n` +
-      `🪪 Govt ID: ${newBooking.id_type} (${newBooking.id_number})\n` +
+      `🪪 Govt ID: ${newBooking.id_type} (Document Uploaded)\n` +
       `🛏️ Room: ${sel.roomName} (${sel.climate})\n` +
       `🏢 Preferred Floor: ${chosenFloor}\n` +
       `📅 Move-in Date: ${moveInDateDisplay ? moveInDateDisplay.value : moveInDate.value}\n` +
@@ -4400,7 +4395,6 @@ function initBookingForm() {
     if (moveInDate) moveInDate.value = '';
     if (moveInDateDisplay) moveInDateDisplay.value = '';
     if (workplace) workplace.value = '';
-    if (guestIdNumber) guestIdNumber.value = '';
     if (removeIdFileBtn) removeIdFileBtn.click();
   });
 
