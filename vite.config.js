@@ -1,6 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import nodemailer from 'nodemailer';
-import { buildInvoicePdfDoc } from './src/invoice-pdf.js';
+import { buildInvoicePdfDoc, calculateInvoicePricing } from './src/invoice-pdf.js';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -57,6 +57,11 @@ export default defineConfig(({ mode }) => {
                   address: "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda"
                 };
 
+                const calc = calculateInvoicePricing(booking, hostel.pricing);
+                const moveInFormatted = calc.moveInTotal.toLocaleString('en-IN');
+                const rentFormatted = calc.monthlyRent.toLocaleString('en-IN');
+                const depositFormatted = calc.securityDeposit.toLocaleString('en-IN');
+
                 const pdfBytes = await buildInvoicePdfDoc(booking, hostel);
                 const pdfBuffer = Buffer.from(pdfBytes);
 
@@ -74,7 +79,9 @@ Hello ${booking.guestName || booking.name || 'Resident'},
 Thank you for choosing Chaitanya Mens PG. Your booking has been verified and confirmed.
 
 - Room: ${booking.roomName || booking.room || 'Executive Room'}
-- Total Move-In Amount Paid: Rs. ${booking.payableOnMoveIn || booking.payable_move_in || '13,900'} (First month rent + deposit)
+- Monthly Rent: Rs. ${rentFormatted} / mo
+- Security Deposit: Rs. ${depositFormatted} (Refundable)
+- Total Move-In Amount Paid: Rs. ${moveInFormatted} (Rent + deposit)
 - Balance Due on Move-In: Rs. 0 (Fully Paid)
 - Verified UPI UTR: ${booking.upi_utr || booking.utr || 'Verified'}
 - Move-In Date: ${booking.date || booking.move_in_date || 'Upcoming'}
@@ -102,7 +109,9 @@ Hostel Desk: +91 99497 85344
                         <div style="background: #f0fdf4; border: 1px solid #86efac; padding: 14px; border-radius: 8px; margin: 16px 0;">
                           <p style="margin: 0 0 6px 0;"><strong>Booking Reference:</strong> ${booking.ref || 'CMPG-BOOKING'}</p>
                           <p style="margin: 0 0 6px 0;"><strong>Room:</strong> ${booking.roomName || booking.room || 'Executive Room'}</p>
-                          <p style="margin: 0 0 6px 0;"><strong>Total Move-In Paid:</strong> Rs. ${booking.payableOnMoveIn || booking.payable_move_in || '13,900'} <span style="color:#15803d;font-weight:600;">(Rent + Deposit)</span></p>
+                          <p style="margin: 0 0 6px 0;"><strong>Monthly Rent:</strong> Rs. ${rentFormatted} / mo</p>
+                          <p style="margin: 0 0 6px 0;"><strong>Security Deposit:</strong> Rs. ${depositFormatted} (Refundable)</p>
+                          <p style="margin: 0 0 6px 0;"><strong>Total Move-In Paid:</strong> Rs. ${moveInFormatted} <span style="color:#15803d;font-weight:600;">(Rent + Deposit)</span></p>
                           <p style="margin: 0 0 6px 0;"><strong>Balance Due on Move-In:</strong> <span style="color:#15803d;font-weight:700;">Rs. 0 (Fully Paid)</span></p>
                           <p style="margin: 0 0 6px 0;"><strong>Verified Bank UTR:</strong> ${booking.upi_utr || booking.utr || 'Verified'}</p>
                           <p style="margin: 0; color: #15803d; font-weight: 700;"><strong>Status:</strong> ✓ Accepted &amp; Verified</p>

@@ -28,6 +28,7 @@ export interface InvoiceOpts {
   paid?: boolean;
   tokenAmount?: number;                    // rupees
   utr?: string | null;
+  pricing?: Record<string, unknown>;
 }
 
 export async function buildInvoicePdf(
@@ -124,6 +125,30 @@ export async function buildInvoicePdf(
   rule(y);
   y -= 24;
 
+  // ---------- dynamic pricing calculation ----------
+  const p = opts.pricing ?? {};
+  const roomStr = String(b.room ?? "").toLowerCase();
+  let baseRent = Number(p.doubleBase) || 8500;
+  let acAdd = Number(p.doubleAcAdd) || 1500;
+  if (roomStr.includes("5") || roomStr.includes("five")) {
+    baseRent = Number(p.fiveBase) || 4800;
+    acAdd = Number(p.fiveAcAdd) || 600;
+  } else if (roomStr.includes("4") || roomStr.includes("four")) {
+    baseRent = Number(p.fourBase) || 5500;
+    acAdd = Number(p.fourAcAdd) || 800;
+  } else if (roomStr.includes("3") || roomStr.includes("triple")) {
+    baseRent = Number(p.tripleBase) || 6500;
+    acAdd = Number(p.tripleAcAdd) || 1000;
+  }
+  const isAc = roomStr.includes("ac") && !roomStr.includes("non");
+  const monthlyRent = baseRent + (isAc ? acAdd : 0);
+  const secDeposit = (p.securityDeposit !== undefined && p.securityDeposit !== null)
+    ? Number(p.securityDeposit)
+    : 5400;
+  const durStr = String(b.duration ?? "1 Month");
+  const durMonths = parseInt(durStr.replace(/[^\d]/g, ""), 10) || 1;
+  const moveInTotal = (monthlyRent * durMonths) + secDeposit;
+
   // ---------- booking table ----------
   text("DETAILS", M, y, 8.5, bold, NAVY);
   textR("VALUE", A4.w - M, y, 8.5, bold, NAVY);
@@ -136,6 +161,9 @@ export async function buildInvoicePdf(
     ["Preferred floor", b.floor ?? "Any Floor"],
     ["Move-in date", b.move_in_date ?? "-"],
     ["Stay duration", b.duration ?? "-"],
+    ["Monthly Rent", `Rs. ${monthlyRent.toLocaleString("en-IN")} / mo`],
+    ["Security Deposit", `Rs. ${secDeposit.toLocaleString("en-IN")}`],
+    ["Total Move-In Charges", `Rs. ${moveInTotal.toLocaleString("en-IN")}`],
   ];
   for (const [k, v] of rows) {
     text(k, M, y, 10, reg, CHARCOAL);
@@ -145,18 +173,18 @@ export async function buildInvoicePdf(
     y -= 9;
   }
 
-  // ---------- token ----------
+  // ---------- token / payment box ----------
   y -= 12;
-  const amt = opts.tokenAmount ?? 0;
+  const amt = opts.tokenAmount && opts.tokenAmount > 0 ? opts.tokenAmount : moveInTotal;
   if (amt > 0) {
     page.drawRectangle({
       x: M, y: y - 52, width: A4.w - M * 2, height: 58,
       color: IVORY,
       borderColor: BORDER, borderWidth: 1,
     });
-    text("BOOKING TOKEN", M + 16, y - 12, 8.5, bold, GOLD);
+    text(opts.paid ? "MOVE-IN PAYMENT CONFIRMED" : "BOOKING CHARGES", M + 16, y - 12, 8.5, bold, GOLD);
     text(
-      opts.paid ? "Received — thank you" : "Payable to hold your bed",
+      opts.paid ? "Received & verified — thank you" : "Payable to confirm your room",
       M + 16, y - 28, 9.5, reg, SLATE,
     );
     textR(`Rs. ${amt.toLocaleString("en-IN")}`, A4.w - M - 16, y - 24, 19, bold, NAVY);

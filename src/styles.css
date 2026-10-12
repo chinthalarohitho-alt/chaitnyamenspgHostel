@@ -4374,6 +4374,45 @@ select.rsv-input,
   border-color: var(--primary);
 }
 
+.mgr-photo-field-label {
+  font-size: 0.73rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 4px;
+  margin-bottom: -4px;
+}
+
+.mgr-photo-field-label span {
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.mgr-input-clear-wrap {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.mgr-photo-clear-btn {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.mgr-photo-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
 @media (max-width: 768px) {
   .mgr-pricing-grid,
   .mgr-photos-grid,

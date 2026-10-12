@@ -193,7 +193,9 @@ export async function fetchBookings() {
           paidAt: r.paid_at,
           paymentAmount: r.payment_amount,
           payable_move_in: r.payable_move_in || (r.payment_amount ? `₹${Number(r.payment_amount).toLocaleString('en-IN')}` : undefined),
-          security_deposit: r.security_deposit || '₹5,400',
+          security_deposit: r.security_deposit,
+          monthly_rent: r.monthly_rent,
+          pricing: r.pricing,
           ref: r.ref,
           name: r.name,
           phone: r.phone,
@@ -248,8 +250,10 @@ export async function acceptBookingWithUtr(ref, utr, extra = {}) {
     utr: utr,
     upi_utr: utr,
     paidAt: now,
+    ...(extraBooking.monthly_rent ? { monthly_rent: extraBooking.monthly_rent } : {}),
     ...(extraBooking.payable_move_in ? { payable_move_in: extraBooking.payable_move_in } : {}),
     ...(extraBooking.security_deposit ? { security_deposit: extraBooking.security_deposit } : {}),
+    ...(extraBooking.pricing ? { pricing: extraBooking.pricing } : {}),
     ...(extraBooking.payment_amount ? { payment_amount: extraBooking.payment_amount, paymentAmount: extraBooking.payment_amount } : {})
   });
 

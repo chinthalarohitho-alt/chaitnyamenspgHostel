@@ -48,6 +48,104 @@ export function formatRs(amount) {
 }
 
 /**
+ * Calculate accurate pricing breakdown using manager-configured prices
+ */
+export function calculateInvoicePricing(b = {}, p = {}) {
+  // Option 1: Price Lock-in on Booking
+  // If the booking has its own pricing snapshot from when it was booked, prioritize it;
+  // otherwise, use the current configured pricing.
+  let pricing = (b.pricing && typeof b.pricing === 'object' && Object.keys(b.pricing).length)
+    ? b.pricing
+    : p;
+
+  if ((!pricing || !Object.keys(pricing).length) && typeof localStorage !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('chaitanya_hostel_config');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.pricing) pricing = parsed.pricing;
+      }
+    } catch (_) {}
+  }
+  if (!pricing) pricing = {};
+
+  const roomStr = String(b.room || b.roomName || '2 Sharing').toLowerCase();
+  let baseRent = Number(pricing.doubleBase) || 8500;
+  let acAdd = Number(pricing.doubleAcAdd) || 1500;
+
+  if (roomStr.includes('5') || roomStr.includes('five')) {
+    baseRent = Number(pricing.fiveBase) || 4800;
+    acAdd = Number(pricing.fiveAcAdd) || 600;
+  } else if (roomStr.includes('4') || roomStr.includes('four')) {
+    baseRent = Number(pricing.fourBase) || 5500;
+    acAdd = Number(pricing.fourAcAdd) || 800;
+  } else if (roomStr.includes('3') || roomStr.includes('triple')) {
+    baseRent = Number(pricing.tripleBase) || 6500;
+    acAdd = Number(pricing.tripleAcAdd) || 1000;
+  } else {
+    baseRent = Number(pricing.doubleBase) || 8500;
+    acAdd = Number(pricing.doubleAcAdd) || 1500;
+  }
+
+  const climateStr = String(b.climate || (roomStr.includes('non-ac') ? 'nonac' : (roomStr.includes('ac') ? 'ac' : 'nonac'))).toLowerCase();
+  const isAc = climateStr.includes('ac') && !climateStr.includes('non');
+  const acCost = isAc ? acAdd : 0;
+  const subtotal = baseRent + acCost;
+
+  const durStr = String(b.duration || '1 Month');
+  const durMonths = parseInt(durStr.replace(/[^\d]/g, ''), 10) || 1;
+  let discountRate = 0;
+  if (durMonths >= 12) discountRate = (Number(pricing.disc12m) || 15) / 100;
+  else if (durMonths >= 6) discountRate = (Number(pricing.disc6m) || 10) / 100;
+  else if (durMonths >= 3) discountRate = (Number(pricing.disc3m) || 5) / 100;
+
+  const discountAmount = Math.round(subtotal * discountRate);
+  const calculatedMonthly = subtotal - discountAmount;
+  const securityDeposit = (pricing.securityDeposit !== undefined && pricing.securityDeposit !== null)
+    ? Number(pricing.securityDeposit)
+    : 5400;
+  const stayTotal = calculatedMonthly * durMonths;
+  const moveInTotal = stayTotal + securityDeposit;
+  let termSavings = discountAmount * durMonths;
+  if (b.term_savings) {
+    const rawS = parseInt(String(b.term_savings).replace(/[^\d]/g, ''), 10);
+    if (!isNaN(rawS) && rawS > 0) termSavings = rawS;
+  }
+
+  // Preserve locked-in booking price if recorded on the booking record;
+  // fall back to configured calculated rate for new bookings.
+  let finalMonthly = calculatedMonthly;
+  if (b.monthly_rent || b.monthly) {
+    const rawM = parseInt(String(b.monthly_rent || b.monthly).replace(/[^\d]/g, ''), 10);
+    if (!isNaN(rawM) && rawM > 0) finalMonthly = rawM;
+  }
+
+  let finalDeposit = securityDeposit;
+  if (b.security_deposit || b.deposit) {
+    const rawD = parseInt(String(b.security_deposit || b.deposit).replace(/[^\d]/g, ''), 10);
+    if (!isNaN(rawD) && rawD > 0) finalDeposit = rawD;
+  }
+
+  let finalMoveIn = (finalMonthly * durMonths) + finalDeposit;
+  if (b.payable_move_in || b.payableOnMoveIn) {
+    const rawP = parseInt(String(b.payable_move_in || b.payableOnMoveIn).replace(/[^\d]/g, ''), 10);
+    if (!isNaN(rawP) && rawP > 0) finalMoveIn = rawP;
+  }
+
+  return {
+    baseRent,
+    acCost,
+    isAc,
+    durMonths,
+    discountRate,
+    termSavings: termSavings > 0 ? termSavings : 0,
+    monthlyRent: finalMonthly,
+    securityDeposit: finalDeposit,
+    moveInTotal: finalMoveIn
+  };
+}
+
+/**
  * Build the full vector PDF invoice bytes
  */
 export async function buildInvoicePdfDoc(b, h = {}) {
@@ -142,19 +240,22 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   let curY = A4.h - headerH - 24;
 
   // 2. METADATA SUMMARY BAR
+  const pricing = h.pricing || b.pricing || {};
+  const calc = calculateInvoicePricing(b, pricing);
+
   const issueDate = b.dateIssued || new Date().toLocaleDateString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric'
   });
 
-  const totalPayableVal = parseInt(String(b.payable_move_in || b.payableOnMoveIn || b.dueOnMoveIn || b.total || b.stayTotal || '13900').replace(/[^\d]/g, ''), 10) || 13900;
+  const totalPayableVal = calc.moveInTotal;
   const totalPayableStr = 'Rs. ' + totalPayableVal.toLocaleString('en-IN');
-  const depositVal = parseInt(String(b.security_deposit || b.deposit || '5400').replace(/[^\d]/g, ''), 10) || 5400;
+  const depositVal = calc.securityDeposit;
   const depositStr = 'Rs. ' + depositVal.toLocaleString('en-IN');
   const rawUtr = (b.upi_utr || b.utr || '').trim();
   let amountPaidVal = totalPayableVal;
   if (b.payment_amount) {
     const pAmt = parseInt(String(b.payment_amount).replace(/[^\d]/g, ''), 10);
-    if (pAmt >= totalPayableVal) amountPaidVal = pAmt;
+    if (!isNaN(pAmt) && pAmt > 0 && pAmt < totalPayableVal) amountPaidVal = pAmt;
   }
   const amountPaidStr = 'Rs. ' + amountPaidVal.toLocaleString('en-IN');
   const balanceDueVal = Math.max(0, totalPayableVal - amountPaidVal);
@@ -230,18 +331,18 @@ export async function buildInvoicePdfDoc(b, h = {}) {
 
   const tableRows = [
     { label: 'Room Sharing Accommodation', val: b.room || '2 Sharing' },
-    { label: 'Climate / Ventilation Plan', val: b.climate || 'Non-AC' },
+    { label: 'Climate / Ventilation Plan', val: b.climate || (calc.isAc ? 'AC' : 'Non-AC') },
     { label: 'Preferred Floor', val: b.floor || 'Any Floor' },
     { label: 'Scheduled Move-In Date', val: b.date || b.move_in_date || '-' },
-    { label: 'Intended Stay Duration', val: b.duration || '1 Month' },
-    { label: 'Monthly Subtotal (Rent)', val: formatRs(b.monthly_rent || b.monthly || '8500') + ' / mo' },
+    { label: 'Intended Stay Duration', val: b.duration || (calc.durMonths + ' Month' + (calc.durMonths > 1 ? 's' : '')) },
+    { label: 'Monthly Subtotal (Rent)', val: 'Rs. ' + calc.monthlyRent.toLocaleString('en-IN') + ' / mo' },
   ];
 
-  const termSavingsVal = parseInt(String(b.term_savings || '').replace(/[^\d]/g, ''), 10) || 0;
+  const termSavingsVal = (b.term_savings ? parseInt(String(b.term_savings).replace(/[^\d]/g, ''), 10) : 0) || calc.termSavings;
   if (termSavingsVal > 0) {
     tableRows.push({
       label: 'Long-term Savings / Discount',
-      val: cleanStr(b.term_savings),
+      val: b.term_savings ? cleanStr(b.term_savings) : `- Rs. ${termSavingsVal.toLocaleString('en-IN')}`,
       highlight: DEEP_GREEN,
     });
   }
@@ -255,7 +356,7 @@ export async function buildInvoicePdfDoc(b, h = {}) {
   tableRows.push({
     label: 'Total Move-In Charges',
     val: totalPayableStr,
-    sub: b.move_in_scope || "First month's rent + deposit",
+    sub: b.move_in_scope || (calc.durMonths > 1 ? `${calc.durMonths} months' rent + deposit` : "First month's rent + deposit"),
   });
 
   tableRows.push({

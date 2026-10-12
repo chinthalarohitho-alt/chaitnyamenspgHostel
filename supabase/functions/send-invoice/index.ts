@@ -95,12 +95,40 @@ Deno.serve(async (req) => {
     address: t.address ?? "",
   };
 
-  const b = booking as Booking;
+  const p = (cfg?.pricing ?? {}) as Record<string, unknown>;
+  const roomStr = String(booking.room ?? "").toLowerCase();
+  let baseRent = Number(p.doubleBase) || 8500;
+  let acAdd = Number(p.doubleAcAdd) || 1500;
+  if (roomStr.includes("5") || roomStr.includes("five")) {
+    baseRent = Number(p.fiveBase) || 4800;
+    acAdd = Number(p.fiveAcAdd) || 600;
+  } else if (roomStr.includes("4") || roomStr.includes("four")) {
+    baseRent = Number(p.fourBase) || 5500;
+    acAdd = Number(p.fourAcAdd) || 800;
+  } else if (roomStr.includes("3") || roomStr.includes("triple")) {
+    baseRent = Number(p.tripleBase) || 6500;
+    acAdd = Number(p.tripleAcAdd) || 1000;
+  }
+  const isAc = roomStr.includes("ac") && !roomStr.includes("non");
+  const monthlyRent = baseRent + (isAc ? acAdd : 0);
+  const secDeposit = (p.securityDeposit !== undefined && p.securityDeposit !== null)
+    ? Number(p.securityDeposit)
+    : 5400;
+  const durStr = String(booking.duration ?? "1 Month");
+  const durMonths = parseInt(durStr.replace(/[^\d]/g, ""), 10) || 1;
+  const moveInTotal = (monthlyRent * durMonths) + secDeposit;
+
+  const b: Booking = {
+    ...booking,
+    monthly_rent: `Rs. ${monthlyRent.toLocaleString("en-IN")}`,
+    security_deposit: `Rs. ${secDeposit.toLocaleString("en-IN")}`,
+    payable_move_in: `Rs. ${moveInTotal.toLocaleString("en-IN")}`,
+  };
   const managerTo = hostel.email || GMAIL_USER;
 
   // Build the PDF once and attach the same bytes to both copies.
   // A failure here must not lose the email, so it degrades to no attachment.
-  const tokenAmount = Number((cfg?.pricing as Record<string, unknown>)?.tokenAmount ?? 0);
+  const tokenAmount = Number(p.tokenAmount ?? 0);
   let pdfBase64: string | null = null;
   if (isReceipt) {
     try {
@@ -108,6 +136,7 @@ Deno.serve(async (req) => {
         paid: true,
         tokenAmount,
         utr: booking.upi_utr,
+        pricing: p,
       });
       pdfBase64 = btoa(String.fromCharCode(...bytes));
     } catch (err) {

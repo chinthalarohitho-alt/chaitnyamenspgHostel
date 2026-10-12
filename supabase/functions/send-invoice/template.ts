@@ -18,6 +18,9 @@ export interface Booking {
   workplace?: string | null;
   upi_utr?: string | null;
   created_at?: string;
+  monthly_rent?: string | null;
+  security_deposit?: string | null;
+  payable_move_in?: string | null;
 }
 
 export interface Hostel {
@@ -61,6 +64,9 @@ export function invoiceText(b: Booking, h: Hostel, forManager = false, hasPdf = 
     b.floor ? `Preferred floor: ${b.floor}` : ``,
     b.move_in_date ? `Move-in: ${b.move_in_date}` : ``,
     b.duration ? `Stay: ${b.duration}` : ``,
+    b.monthly_rent ? `Monthly Rent: ${b.monthly_rent} / mo` : ``,
+    b.security_deposit ? `Security Deposit: ${b.security_deposit}` : ``,
+    b.payable_move_in ? `Total Move-In Charges: ${b.payable_move_in}` : ``,
     b.workplace ? `College / Company: ${b.workplace}` : ``,
     ``,
     hasPdf ? `Your invoice is attached to this email as a PDF.` : ``,
@@ -148,6 +154,9 @@ export function invoiceHtml(b: Booking, h: Hostel, forManager = false, hasPdf = 
               ${b.floor ? row("Preferred floor", b.floor) : ""}
               ${b.move_in_date ? row("Move-in date", b.move_in_date) : ""}
               ${b.duration ? row("Stay duration", b.duration) : ""}
+              ${b.monthly_rent ? row("Monthly Rent", `${b.monthly_rent} / mo`) : ""}
+              ${b.security_deposit ? row("Security Deposit", b.security_deposit) : ""}
+              ${b.payable_move_in ? row("Total Move-In Charges", b.payable_move_in) : ""}
               ${b.workplace ? row("College / Company", b.workplace, true) : ""}
             </table>
           </td>

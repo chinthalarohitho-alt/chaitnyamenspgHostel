@@ -26,7 +26,7 @@ import heroExteriorUrl from './assets/hostel-exterior.jpg';
 
 import { mountLottie, destroyLottie } from './lottie-anim.js';
 import { buildUpiUri, renderQr, submitUtr, setBookingEmail } from './upi-token.js';
-import { downloadInvoicePdf } from './invoice-pdf.js';
+import { downloadInvoicePdf, calculateInvoicePricing } from './invoice-pdf.js';
 import {
   validateUpiId, validateUtr, validateEmail, validatePhone,
   validateWhatsApp, validateMoney, validatePercent, markField, validatePhotoUrl} from './validate.js';
@@ -110,7 +110,7 @@ function gotoConfirmStep(n) {
 function showUpiToken(ref) {
   const bar = document.getElementById('cstepBar');
   const cfg = getHostelConfig();
-  const vpa = (cfg?.texts?.upiId || '').trim();
+  const vpa = (cfg?.texts?.upiId || '9949785344@ybl').trim();
 
   // Total Move-in Amount (Rent + Refundable Deposit): dynamically pull full payable amount to wire via UPI
   let amount = 0;
@@ -127,7 +127,10 @@ function showUpiToken(ref) {
     amount = dep + rent;
   }
   if (!amount) {
-    amount = 13900;
+    const p = cfg?.pricing || {};
+    const base = Number(p.doubleBase) || 8500;
+    const dep = (p.securityDeposit !== undefined && p.securityDeposit !== null) ? Number(p.securityDeposit) : 5400;
+    amount = base + dep;
   }
 
   const payBtn = document.getElementById('cstepToPay');
@@ -250,17 +253,29 @@ function initConfirmSteps() {
   const invoiceAction = document.getElementById('cstepInvoiceAction');
   const downloadBtn = document.getElementById('downloadInvoiceBtn');
 
-  downloadBtn?.addEventListener('click', async () => {
+  const step1DownloadBtn = document.getElementById('step1DownloadInvoiceBtn');
+
+  async function handleInvoiceDownload(btnTarget) {
+    if (!btnTarget) return;
     const liveUtr = (document.getElementById('upiUtrInput')?.value || '').replace(/\D/g, '').slice(0, 12);
     const guestEmailVal = (document.getElementById('upiEmailInput')?.value || document.getElementById('email')?.value || '').trim();
     const gName = (document.getElementById('fullName')?.value || document.getElementById('modalName')?.textContent || 'Resident').trim();
     const gPhone = (document.getElementById('phone')?.value || document.getElementById('modalPhone')?.textContent || '').trim();
 
+    const cfg = getHostelConfig();
+    const p = cfg?.pricing || {};
+
     if (!currentBookingContext) {
-      const moveInTotalStr = document.getElementById('dispMoveInTotal')?.textContent || '₹13,900';
-      const moveInTotalNum = parseInt(moveInTotalStr.replace(/[^\d]/g, ''), 10) || 13900;
-      const secDepositStr = document.getElementById('dispSecurityDeposit')?.textContent || '₹5,400';
-      const secDepositNum = parseInt(secDepositStr.replace(/[^\d]/g, ''), 10) || 5400;
+      const calcP = calculateInvoicePricing({
+        room: document.getElementById('modalRoom')?.textContent || '2 Sharing',
+        climate: document.getElementById('modalClimate')?.textContent || 'Non-AC',
+        duration: '1 Month'
+      }, p);
+      const monthlyTotalStr = document.getElementById('dispMonthlyTotal')?.textContent?.trim() || `₹${calcP.monthlyRent.toLocaleString('en-IN')}`;
+      const secDepositStr = document.getElementById('dispSecurityDeposit')?.textContent?.trim() || `₹${calcP.securityDeposit.toLocaleString('en-IN')}`;
+      const moveInTotalStr = document.getElementById('dispMoveInTotal')?.textContent?.trim() || `₹${calcP.moveInTotal.toLocaleString('en-IN')}`;
+      const moveInTotalNum = parseInt(moveInTotalStr.replace(/[^\d]/g, ''), 10) || calcP.moveInTotal;
+      const secDepositNum = parseInt(secDepositStr.replace(/[^\d]/g, ''), 10) || calcP.securityDeposit;
 
       currentBookingContext = {
         ref: document.getElementById('modalRefCode')?.textContent || '#CMPG-BOOKING',
@@ -272,7 +287,7 @@ function initConfirmSteps() {
         floor: document.getElementById('preferredFloor')?.value || '1st Floor',
         date: document.getElementById('modalDate')?.textContent || '-',
         duration: '1 Month',
-        monthly_rent: document.getElementById('dispMonthlyTotal')?.textContent || '₹8,500',
+        monthly_rent: monthlyTotalStr,
         term_savings: document.getElementById('dispDiscountVal')?.textContent || '',
         security_deposit: secDepositStr,
         payable_move_in: moveInTotalStr,
@@ -280,7 +295,9 @@ function initConfirmSteps() {
         token_amount: moveInTotalNum,
         deposit_amount: secDepositNum,
         payment_amount: moveInTotalNum,
+        paymentAmount: moveInTotalNum,
         upi_utr: liveUtr,
+        pricing: p,
         dateIssued: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
       };
     } else {
@@ -288,27 +305,28 @@ function initConfirmSteps() {
       if (guestEmailVal && !currentBookingContext.email) currentBookingContext.email = guestEmailVal;
       if (gName && (!currentBookingContext.name || currentBookingContext.name === 'Resident')) currentBookingContext.name = gName;
       if (gPhone && !currentBookingContext.phone) currentBookingContext.phone = gPhone;
+      currentBookingContext.pricing = p;
     }
-    const prevHtml = downloadBtn.innerHTML;
-    downloadBtn.disabled = true;
-    downloadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Generating Invoice...</span>';
+    const prevHtml = btnTarget.innerHTML;
+    btnTarget.disabled = true;
+    btnTarget.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Generating Invoice...</span>';
 
-    const cfg = getHostelConfig();
     const hostelInfo = {
       name: cfg?.texts?.hostelName || 'Chaitanya Mens PG & Hostel',
       phone: cfg?.texts?.phone || '+91 99497 85344',
       email: (cfg?.texts?.email && cfg?.texts?.email !== 'jareenaworks@gmail.com') ? cfg.texts.email : 'chaitnyamenspg@gmail.com',
-      address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda"
+      address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda",
+      pricing: cfg?.pricing
     };
 
     const success = await downloadInvoicePdf(currentBookingContext, hostelInfo);
-    downloadBtn.disabled = false;
+    btnTarget.disabled = false;
     if (success) {
-      downloadBtn.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span>Invoice Downloaded!</span>';
-      setTimeout(() => { downloadBtn.innerHTML = prevHtml; }, 3500);
+      btnTarget.innerHTML = '<i class="fa-solid fa-circle-check"></i> <span>Invoice Downloaded!</span>';
+      setTimeout(() => { btnTarget.innerHTML = prevHtml; }, 3500);
       showSiteToast('Invoice Downloaded', 'Official booking receipt PDF saved to Downloads.', 'fa-solid fa-file-arrow-down');
     } else {
-      downloadBtn.innerHTML = prevHtml;
+      btnTarget.innerHTML = prevHtml;
       showAppAlert({
         title: 'PDF Generation Failed',
         message: 'Could not generate receipt PDF. Please try again.',
@@ -316,7 +334,10 @@ function initConfirmSteps() {
         icon: 'fa-solid fa-file-circle-exclamation'
       });
     }
-  });
+  }
+
+  downloadBtn?.addEventListener('click', () => handleInvoiceDownload(downloadBtn));
+  step1DownloadBtn?.addEventListener('click', () => handleInvoiceDownload(step1DownloadBtn));
 
   // Strip anything that isn't a digit as it is typed or pasted, so the
   // field cannot hold something that will be rejected on submit.
@@ -377,7 +398,8 @@ function initConfirmSteps() {
       name: cfg?.texts?.hostelName || 'Chaitanya Mens PG & Hostel',
       phone: cfg?.texts?.phone || '+91 99497 85344',
       email: (cfg?.texts?.email && cfg?.texts?.email !== 'jareenaworks@gmail.com') ? cfg.texts.email : 'chaitnyamenspg@gmail.com',
-      address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda"
+      address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda",
+      pricing: cfg?.pricing
     };
     if (currentBookingContext) {
       const guestEmail = currentBookingContext.email || (document.getElementById('upiEmailInput')?.value || '').trim();
@@ -582,7 +604,7 @@ const DEFAULT_HOSTEL_CONFIG = {
     landmark: "Landmark: Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar",
     visitingHours: "24 hrs",
     openingNotice: "Opening 1st Oct • 2, 3, 4 & 5 Sharing Beds",
-    upiId: "",
+    upiId: "9949785344@ybl",
     upiName: "Chaitanya Mens PG & Hostel"
   },
   photos: {
@@ -595,7 +617,16 @@ const DEFAULT_HOSTEL_CONFIG = {
     diningImg: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
     kitchenImg: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80",
     laundryImg: "https://images.unsplash.com/photo-1545173168-9f1947eebb7f?auto=format&fit=crop&w=800&q=80",
-    securityImg: "https://images.unsplash.com/photo-1557597774-9d273605dfa9?auto=format&fit=crop&w=800&q=80"
+    securityImg: "https://images.unsplash.com/photo-1557597774-9d273605dfa9?auto=format&fit=crop&w=800&q=80",
+    doubleTitle: "Double Sharing Twin Beds",
+    tripleTitle: "Triple Sharing Layout",
+    execTitle: "Executive Suite Interior",
+    studyTitle: "Quiet Study Lounge",
+    terraceTitle: "Rooftop Sky Terrace",
+    diningTitle: "",
+    kitchenTitle: "Homestyle Kitchen Delights",
+    laundryTitle: "Smart Laundry Room",
+    securityTitle: "24/7 Gated Security & CCTV"
   },
   inventory: {
     double: 2,
@@ -826,19 +857,38 @@ function applyHostelConfigToSite(cfg) {
   const cinematicImg = document.getElementById('cinematicBgImg');
   if (cinematicImg && ph.cinematicImg) cinematicImg.src = resolvePhotoUrl(ph.cinematicImg);
 
-  const updateGal = (id, url) => {
-    const el = document.getElementById(id);
-    if (el && url) el.src = url;
+  const updateGal = (imgId, titleId, tagId, url, title, defaultTitle) => {
+    const imgEl = document.getElementById(imgId);
+    if (imgEl && url) imgEl.src = resolvePhotoUrl(url);
+
+    const titleEl = document.getElementById(titleId);
+    const tagEl = document.getElementById(tagId);
+    const itemEl = imgEl ? imgEl.closest('.gallery-item') : null;
+
+    const displayTitle = title !== undefined ? title : defaultTitle;
+    if (titleEl) {
+      if (displayTitle && displayTitle.trim()) {
+        titleEl.textContent = displayTitle.trim();
+        titleEl.style.display = '';
+        if (tagEl) tagEl.style.display = '';
+        if (itemEl) itemEl.dataset.caption = displayTitle.trim();
+      } else {
+        titleEl.textContent = '';
+        titleEl.style.display = 'none';
+        if (tagEl) tagEl.style.display = 'none';
+        if (itemEl) itemEl.dataset.caption = '';
+      }
+    }
   };
-  updateGal('galImgExec', ph.execImg || ph.doubleImg);
-  updateGal('galImgDouble', ph.doubleImg);
-  updateGal('galImgTriple', ph.tripleImg);
-  updateGal('galImgDining', ph.diningImg);
-  updateGal('galImgKitchen', ph.kitchenImg);
-  updateGal('galImgLaundry', ph.laundryImg);
-  updateGal('galImgSecurity', ph.securityImg);
-  updateGal('galImgStudy', ph.studyImg);
-  updateGal('galImgTerrace', ph.terraceImg);
+  updateGal('galImgExec', 'galTitleExec', 'galTagExec', ph.execImg || ph.doubleImg, ph.execTitle, DEFAULT_HOSTEL_CONFIG.photos.execTitle);
+  updateGal('galImgDouble', 'galTitleDouble', 'galTagDouble', ph.doubleImg, ph.doubleTitle, DEFAULT_HOSTEL_CONFIG.photos.doubleTitle);
+  updateGal('galImgTriple', 'galTitleTriple', 'galTagTriple', ph.tripleImg, ph.tripleTitle, DEFAULT_HOSTEL_CONFIG.photos.tripleTitle);
+  updateGal('galImgDining', 'galTitleDining', 'galTagDining', ph.diningImg, ph.diningTitle, DEFAULT_HOSTEL_CONFIG.photos.diningTitle);
+  updateGal('galImgKitchen', 'galTitleKitchen', 'galTagKitchen', ph.kitchenImg, ph.kitchenTitle, DEFAULT_HOSTEL_CONFIG.photos.kitchenTitle);
+  updateGal('galImgLaundry', 'galTitleLaundry', 'galTagLaundry', ph.laundryImg, ph.laundryTitle, DEFAULT_HOSTEL_CONFIG.photos.laundryTitle);
+  updateGal('galImgSecurity', 'galTitleSecurity', 'galTagSecurity', ph.securityImg, ph.securityTitle, DEFAULT_HOSTEL_CONFIG.photos.securityTitle);
+  updateGal('galImgStudy', 'galTitleStudy', 'galTagStudy', ph.studyImg, ph.studyTitle, DEFAULT_HOSTEL_CONFIG.photos.studyTitle);
+  updateGal('galImgTerrace', 'galTitleTerrace', 'galTagTerrace', ph.terraceImg, ph.terraceTitle, DEFAULT_HOSTEL_CONFIG.photos.terraceTitle);
 }
 
 /* ===================================================================
@@ -1671,6 +1721,17 @@ function initWardenPortal() {
     setVal('cfgLaundryImg', cfg.photos.laundryImg);
     setVal('cfgSecurityImg', cfg.photos.securityImg);
 
+    // Photo Display Titles
+    setVal('cfgDoubleTitle', cfg.photos.doubleTitle !== undefined ? cfg.photos.doubleTitle : DEFAULT_HOSTEL_CONFIG.photos.doubleTitle);
+    setVal('cfgTripleTitle', cfg.photos.tripleTitle !== undefined ? cfg.photos.tripleTitle : DEFAULT_HOSTEL_CONFIG.photos.tripleTitle);
+    setVal('cfgExecTitle', cfg.photos.execTitle !== undefined ? cfg.photos.execTitle : DEFAULT_HOSTEL_CONFIG.photos.execTitle);
+    setVal('cfgStudyTitle', cfg.photos.studyTitle !== undefined ? cfg.photos.studyTitle : DEFAULT_HOSTEL_CONFIG.photos.studyTitle);
+    setVal('cfgTerraceTitle', cfg.photos.terraceTitle !== undefined ? cfg.photos.terraceTitle : DEFAULT_HOSTEL_CONFIG.photos.terraceTitle);
+    setVal('cfgDiningTitle', cfg.photos.diningTitle !== undefined ? cfg.photos.diningTitle : (DEFAULT_HOSTEL_CONFIG.photos.diningTitle || ''));
+    setVal('cfgKitchenTitle', cfg.photos.kitchenTitle !== undefined ? cfg.photos.kitchenTitle : DEFAULT_HOSTEL_CONFIG.photos.kitchenTitle);
+    setVal('cfgLaundryTitle', cfg.photos.laundryTitle !== undefined ? cfg.photos.laundryTitle : DEFAULT_HOSTEL_CONFIG.photos.laundryTitle);
+    setVal('cfgSecurityTitle', cfg.photos.securityTitle !== undefined ? cfg.photos.securityTitle : DEFAULT_HOSTEL_CONFIG.photos.securityTitle);
+
     // Update Photo Previews
     const updatePrev = (prevId, url) => {
       const img = document.getElementById(prevId);
@@ -1732,6 +1793,18 @@ function initWardenPortal() {
     });
   });
 
+  // 4b. Clear / Remove Photo Display Title Buttons
+  document.querySelectorAll('.mgr-photo-clear-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.clear;
+      const targetInput = document.getElementById(targetId);
+      if (targetInput) {
+        targetInput.value = '';
+        targetInput.dispatchEvent(new Event('input'));
+      }
+    });
+  });
+
   // 5. Save All Changes Button
   if (mgrSaveAllBtn) {
     mgrSaveAllBtn.addEventListener('click', async () => {
@@ -1743,6 +1816,11 @@ function initWardenPortal() {
       const getTxt = (id, fallback) => {
         const el = document.getElementById(id);
         return el && el.value.trim() ? el.value.trim() : fallback;
+      };
+      const getOptionalTxt = (id, fallback) => {
+        const el = document.getElementById(id);
+        if (!el) return fallback !== undefined ? fallback : '';
+        return el.value.trim();
       };
 
       const updatedConfig = {
@@ -1783,7 +1861,17 @@ function initWardenPortal() {
           diningImg: getTxt('cfgDiningImg', DEFAULT_HOSTEL_CONFIG.photos.diningImg),
           kitchenImg: getTxt('cfgKitchenImg', DEFAULT_HOSTEL_CONFIG.photos.kitchenImg),
           laundryImg: getTxt('cfgLaundryImg', DEFAULT_HOSTEL_CONFIG.photos.laundryImg),
-          securityImg: getTxt('cfgSecurityImg', DEFAULT_HOSTEL_CONFIG.photos.securityImg)
+          securityImg: getTxt('cfgSecurityImg', DEFAULT_HOSTEL_CONFIG.photos.securityImg),
+
+          doubleTitle: getOptionalTxt('cfgDoubleTitle', DEFAULT_HOSTEL_CONFIG.photos.doubleTitle),
+          tripleTitle: getOptionalTxt('cfgTripleTitle', DEFAULT_HOSTEL_CONFIG.photos.tripleTitle),
+          execTitle: getOptionalTxt('cfgExecTitle', DEFAULT_HOSTEL_CONFIG.photos.execTitle),
+          studyTitle: getOptionalTxt('cfgStudyTitle', DEFAULT_HOSTEL_CONFIG.photos.studyTitle),
+          terraceTitle: getOptionalTxt('cfgTerraceTitle', DEFAULT_HOSTEL_CONFIG.photos.terraceTitle),
+          diningTitle: getOptionalTxt('cfgDiningTitle', ''),
+          kitchenTitle: getOptionalTxt('cfgKitchenTitle', DEFAULT_HOSTEL_CONFIG.photos.kitchenTitle),
+          laundryTitle: getOptionalTxt('cfgLaundryTitle', DEFAULT_HOSTEL_CONFIG.photos.laundryTitle),
+          securityTitle: getOptionalTxt('cfgSecurityTitle', DEFAULT_HOSTEL_CONFIG.photos.securityTitle)
         },
         inventory: { ...bedInventory }
       };
@@ -2354,12 +2442,15 @@ function renderEnquiriesTable() {
           name: cfg?.texts?.hostelName || 'Chaitanya Mens PG & Hostel',
           phone: cfg?.texts?.phone || '+91 99497 85344',
           email: (cfg?.texts?.email && cfg?.texts?.email !== 'jareenaworks@gmail.com') ? cfg.texts.email : 'chaitnyamenspg@gmail.com',
-          address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda"
+          address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda",
+          pricing: cfg?.pricing
         };
 
-        const moveInTotalVal = b.payable_move_in || (b.paymentAmount ? `₹${Number(b.paymentAmount).toLocaleString('en-IN')}` : '₹13,900');
-        const moveInNum = parseInt(String(moveInTotalVal).replace(/[^\d]/g, ''), 10) || 13900;
-        const depositVal = b.security_deposit || '₹5,400';
+        const calc = calculateInvoicePricing(b, cfg?.pricing);
+        const moveInTotalVal = `₹${calc.moveInTotal.toLocaleString('en-IN')}`;
+        const moveInNum = calc.moveInTotal;
+        const depositVal = `₹${calc.securityDeposit.toLocaleString('en-IN')}`;
+        const monthlyVal = `₹${calc.monthlyRent.toLocaleString('en-IN')}`;
 
         try {
           await acceptBookingWithUtr(b.ref, utr, {
@@ -2373,10 +2464,12 @@ function renderEnquiriesTable() {
               upi_utr: utr,
               utr: utr,
               paidAt: new Date().toISOString(),
+              monthly_rent: monthlyVal,
               payable_move_in: moveInTotalVal,
               security_deposit: depositVal,
               payment_amount: moveInNum,
-              paymentAmount: moveInNum
+              paymentAmount: moveInNum,
+              pricing: cfg?.pricing
             },
             hostel: hostelInfo
           });
@@ -2440,7 +2533,8 @@ function renderEnquiriesTable() {
           name: cfg?.texts?.hostelName || 'Chaitanya Mens PG & Hostel',
           phone: cfg?.texts?.phone || '+91 99497 85344',
           email: (cfg?.texts?.email && cfg?.texts?.email !== 'jareenaworks@gmail.com') ? cfg.texts.email : 'chaitnyamenspg@gmail.com',
-          address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda"
+          address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda",
+          pricing: cfg?.pricing
         };
         const r = await sendInvoiceEmail(rref, 'receipt', {
           email: b?.email,
@@ -2449,7 +2543,8 @@ function renderEnquiriesTable() {
             status: 'accepted',
             paymentStatus: 'paid',
             payment_status: 'paid',
-            isVerified: true
+            isVerified: true,
+            pricing: cfg?.pricing
           },
           hostel: hostelInfo
         });
@@ -2483,9 +2578,11 @@ function renderEnquiriesTable() {
           name: cfg?.texts?.hostelName || 'Chaitanya Mens PG & Hostel',
           phone: cfg?.texts?.phone || '+91 99497 85344',
           email: (cfg?.texts?.email && cfg?.texts?.email !== 'jareenaworks@gmail.com') ? cfg.texts.email : 'chaitnyamenspg@gmail.com',
-          address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda"
+          address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, Naimnagar, Hanamkonda",
+          pricing: cfg?.pricing
         };
         try {
+          const calc = calculateInvoicePricing(b, cfg?.pricing);
           await downloadInvoicePdf({
             ...b,
             status: 'accepted',
@@ -2493,9 +2590,12 @@ function renderEnquiriesTable() {
             payment_status: 'paid',
             isVerified: true,
             upi_utr: b.utr || b.upi_utr,
-            payable_move_in: b.payable_move_in || (b.paymentAmount ? `₹${Number(b.paymentAmount).toLocaleString('en-IN')}` : '₹13,900'),
-            security_deposit: b.security_deposit || '₹5,400',
-            payment_amount: b.paymentAmount || b.payment_amount || 13900
+            monthly_rent: `₹${calc.monthlyRent.toLocaleString('en-IN')}`,
+            security_deposit: `₹${calc.securityDeposit.toLocaleString('en-IN')}`,
+            payable_move_in: `₹${calc.moveInTotal.toLocaleString('en-IN')}`,
+            payment_amount: calc.moveInTotal,
+            paymentAmount: calc.moveInTotal,
+            pricing: cfg?.pricing
           }, hostelInfo);
         } catch (err) {
           console.error('[pdf] direct download error:', err);
@@ -3599,6 +3699,7 @@ function initGallery() {
     lightboxImg.src = img.src;
     lightboxImg.alt = img.alt;
     lightboxCaption.textContent = caption;
+    lightboxCaption.style.display = (caption && caption.trim()) ? '' : 'none';
 
     lightboxModal.classList.add('active');
     lightboxModal.setAttribute('aria-hidden', 'false');
@@ -3822,10 +3923,18 @@ function initBookingForm() {
     // 3. Save booking to local DB for Warden Portal
     const chosenFloor = preferredFloor ? preferredFloor.value : "Any Floor";
     const cfg = getHostelConfig();
-    const moveInTotalStr = document.getElementById('dispMoveInTotal')?.textContent || '₹13,900';
-    const moveInTotalNum = parseInt(moveInTotalStr.replace(/[^\d]/g, ''), 10) || 13900;
-    const secDepositStr = document.getElementById('dispSecurityDeposit')?.textContent || '₹5,400';
-    const secDepositNum = (cfg.pricing && cfg.pricing.securityDeposit) ? Number(cfg.pricing.securityDeposit) : (parseInt(secDepositStr.replace(/[^\d]/g, ''), 10) || 5400);
+    const pricing = cfg?.pricing || {};
+    const bookingPricing = calculateInvoicePricing({
+      room: `${sel.roomName} (${sel.climate})`,
+      climate: sel.climate,
+      duration: sel.duration
+    }, pricing);
+
+    const monthlyTotalStr = document.getElementById('dispMonthlyTotal')?.textContent?.trim() || `₹${bookingPricing.monthlyRent.toLocaleString('en-IN')}`;
+    const secDepositStr = document.getElementById('dispSecurityDeposit')?.textContent?.trim() || `₹${bookingPricing.securityDeposit.toLocaleString('en-IN')}`;
+    const moveInTotalStr = document.getElementById('dispMoveInTotal')?.textContent?.trim() || `₹${bookingPricing.moveInTotal.toLocaleString('en-IN')}`;
+    const moveInTotalNum = parseInt(moveInTotalStr.replace(/[^\d]/g, ''), 10) || bookingPricing.moveInTotal;
+    const secDepositNum = parseInt(secDepositStr.replace(/[^\d]/g, ''), 10) || bookingPricing.securityDeposit;
 
     const newBooking = {
       ref: refId,
@@ -3833,37 +3942,26 @@ function initBookingForm() {
       phone: cleanPhone,
       floor: chosenFloor,
       room: `${sel.roomName} (${sel.climate})`,
-      date: moveInDateDisplay ? moveInDateDisplay.value : moveInDate.value,
-      duration: sel.duration,
-      workplace: workplace ? workplace.value.trim() : '',
-      email: cleanEmail.toLowerCase(),
-      payable_move_in: moveInTotalStr,
-      security_deposit: secDepositStr,
-      payment_amount: moveInTotalNum,
-      paymentAmount: moveInTotalNum,
-      time: "Just now"
-    };
-
-    currentBookingContext = {
-      ref: refId,
-      name: fullName.value.trim(),
-      phone: cleanPhone,
-      email: cleanEmail.toLowerCase(),
-      workplace: workplace ? workplace.value.trim() : '',
-      floor: chosenFloor,
-      room: `${sel.roomName} (${sel.climate})`,
       climate: sel.climate,
       date: moveInDateDisplay ? moveInDateDisplay.value : moveInDate.value,
       duration: sel.duration,
-      monthly_rent: document.getElementById('dispMonthlyTotal')?.textContent || '₹8,500',
+      workplace: workplace ? workplace.value.trim() : '',
+      email: cleanEmail.toLowerCase(),
+      monthly_rent: monthlyTotalStr,
       term_savings: document.getElementById('dispDiscountVal')?.textContent || '',
       security_deposit: secDepositStr,
       payable_move_in: moveInTotalStr,
       move_in_scope: document.getElementById('dispMoveInScope')?.textContent || "First month's rent + deposit",
-      token_amount: moveInTotalNum,
-      deposit_amount: secDepositNum,
       payment_amount: moveInTotalNum,
       paymentAmount: moveInTotalNum,
+      pricing: pricing,
+      time: "Just now"
+    };
+
+    currentBookingContext = {
+      ...newBooking,
+      token_amount: moveInTotalNum,
+      deposit_amount: secDepositNum,
       upi_utr: '',
       dateIssued: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
     };
