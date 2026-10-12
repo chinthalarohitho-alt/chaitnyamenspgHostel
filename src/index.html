@@ -805,6 +805,10 @@
               <div class="calc-group">
                 <label class="calc-label"><span class="step-num">3</span> Intended Stay Duration (Save More)</label>
                 <div class="duration-selector" id="calcDurationOptions">
+                  <button type="button" class="duration-btn" id="durBtnDaily" data-type="daily" data-days="1" data-discount="0">
+                    <span class="dur-months">Daily Stay</span>
+                    <span class="dur-badge" id="durDailyBadge">Per Day</span>
+                  </button>
                   <button type="button" class="duration-btn active" data-months="1" data-discount="0">
                     <span class="dur-months">1 Month</span>
                     <span class="dur-badge">Flexible</span>
@@ -821,6 +825,30 @@
                     <span class="dur-months">12 Months</span>
                     <span class="dur-badge discount-tag">15% OFF</span>
                   </button>
+                </div>
+
+                <!-- 📅 Interactive Day-wise Stay Picker (Revealed on Daily Stay) -->
+                <div class="daily-stay-picker" id="dailyStayPicker" style="display: none;">
+                  <div class="daily-picker-header">
+                    <span><i class="fa-solid fa-calendar-day"></i> Select Number of Days:</span>
+                    <span class="daily-rate-tag" id="dispDailyRateTag">₹350 / day</span>
+                  </div>
+                  <div class="daily-stepper-wrap">
+                    <button type="button" class="daily-step-btn" id="dailyStepDecr" aria-label="Decrease days"><i class="fa-solid fa-minus"></i></button>
+                    <div class="daily-input-wrap">
+                      <input type="number" id="dailyDaysInput" min="1" max="30" value="1" inputmode="numeric">
+                      <span class="daily-days-label" id="dailyDaysLabel">Day</span>
+                    </div>
+                    <button type="button" class="daily-step-btn" id="dailyStepIncr" aria-label="Increase days"><i class="fa-solid fa-plus"></i></button>
+                  </div>
+                  <div class="daily-presets" id="dailyPresets">
+                    <button type="button" class="daily-preset-btn active" data-days="1">1 Day</button>
+                    <button type="button" class="daily-preset-btn" data-days="2">2 Days</button>
+                    <button type="button" class="daily-preset-btn" data-days="3">3 Days</button>
+                    <button type="button" class="daily-preset-btn" data-days="5">5 Days</button>
+                    <button type="button" class="daily-preset-btn" data-days="7">7 Days</button>
+                    <button type="button" class="daily-preset-btn" data-days="15">15 Days</button>
+                  </div>
                 </div>
               </div>
 
@@ -1065,7 +1093,7 @@
                 <!-- Subtotals & Adjustments Breakdown -->
                 <div class="receipt-subtotals-list">
                   <div class="receipt-row sub-row">
-                    <span class="sub-label">Monthly Subtotal</span>
+                    <span class="sub-label" id="dispSubtotalLabel">Monthly Subtotal</span>
                     <span class="sub-val" id="dispMonthlyTotal">₹8,500</span>
                   </div>
 
@@ -1861,6 +1889,30 @@
                     <span>₹</span>
                   </div>
                   <small class="mgr-field-hint">Refundable security deposit collected on move-in.</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Day-Wise Stay Pricing -->
+            <div class="mgr-section-box mt-16">
+              <h4><i class="fa-solid fa-calendar-day"></i> Day-Wise Stay Pricing (Configurable Daily Rate)</h4>
+              <p class="mgr-hint">Set the per-day accommodation charge for residents staying on a day-by-day basis instead of full monthly rental.</p>
+              <div class="mgr-discounts-grid">
+                <div class="mgr-input-group">
+                  <label for="cfgDailyRate">Daily Stay Base Rate (₹ / Day)</label>
+                  <div class="mgr-currency-wrap">
+                    <span>₹</span>
+                    <input type="number" id="cfgDailyRate" class="mgr-input" value="350" step="25" min="50">
+                  </div>
+                  <small class="mgr-field-hint">Standard per-day room rate for Non-AC day-wise stay.</small>
+                </div>
+                <div class="mgr-input-group">
+                  <label for="cfgDailyAcAdd">Daily AC Surcharge (₹ / Day)</label>
+                  <div class="mgr-currency-wrap">
+                    <span>+ ₹</span>
+                    <input type="number" id="cfgDailyAcAdd" class="mgr-input" value="100" step="25" min="0">
+                  </div>
+                  <small class="mgr-field-hint">Additional AC charge per day if resident chooses AC.</small>
                 </div>
               </div>
             </div>

@@ -597,7 +597,9 @@ const DEFAULT_HOSTEL_CONFIG = {
     disc6m: 10,
     disc12m: 15,
     securityDeposit: 5400,
-    tokenAmount: 500
+    tokenAmount: 500,
+    dailyRate: 350,
+    dailyAcAdd: 100
   },
   texts: {
     hostelName: "Chaitanya Mens PG & Hostel",
@@ -762,19 +764,29 @@ function applyHostelConfigToSite(cfg) {
   }
 
   // Duration Discounts
-  const durBtns = document.querySelectorAll('#calcDurationOptions .duration-btn');
-  if (durBtns.length >= 4) {
-    durBtns[1].dataset.discount = (p.disc3m / 100).toString();
-    const tag3 = durBtns[1].querySelector('.discount-tag');
+  const durBtn3 = document.querySelector('#calcDurationOptions .duration-btn[data-months="3"]');
+  if (durBtn3) {
+    durBtn3.dataset.discount = (p.disc3m / 100).toString();
+    const tag3 = durBtn3.querySelector('.discount-tag');
     if (tag3) tag3.textContent = `${p.disc3m}% OFF`;
-
-    durBtns[2].dataset.discount = (p.disc6m / 100).toString();
-    const tag6 = durBtns[2].querySelector('.discount-tag');
+  }
+  const durBtn6 = document.querySelector('#calcDurationOptions .duration-btn[data-months="6"]');
+  if (durBtn6) {
+    durBtn6.dataset.discount = (p.disc6m / 100).toString();
+    const tag6 = durBtn6.querySelector('.discount-tag');
     if (tag6) tag6.textContent = `${p.disc6m}% OFF`;
-
-    durBtns[3].dataset.discount = (p.disc12m / 100).toString();
-    const tag12 = durBtns[3].querySelector('.discount-tag');
+  }
+  const durBtn12 = document.querySelector('#calcDurationOptions .duration-btn[data-months="12"]');
+  if (durBtn12) {
+    durBtn12.dataset.discount = (p.disc12m / 100).toString();
+    const tag12 = durBtn12.querySelector('.discount-tag');
     if (tag12) tag12.textContent = `${p.disc12m}% OFF`;
+  }
+
+  // Daily stay badge
+  const durDailyBadge = document.getElementById('durDailyBadge');
+  if (durDailyBadge) {
+    durDailyBadge.textContent = `₹${Number(p.dailyRate ?? 350).toLocaleString('en-IN')}/day`;
   }
 
   // Trigger recalculation if room calculator is initialized
@@ -1700,6 +1712,8 @@ function initWardenPortal() {
     setVal('cfgDisc6m', cfg.pricing.disc6m);
     setVal('cfgDisc12m', cfg.pricing.disc12m);
     setVal('cfgSecurityDeposit', (cfg.pricing.securityDeposit !== undefined && cfg.pricing.securityDeposit !== null) ? cfg.pricing.securityDeposit : 5400);
+    setVal('cfgDailyRate', cfg.pricing.dailyRate ?? 350);
+    setVal('cfgDailyAcAdd', cfg.pricing.dailyAcAdd ?? 100);
     if (document.getElementById('cfgTokenAmount')) setVal('cfgTokenAmount', cfg.pricing.tokenAmount || 500);
 
     // Texts
@@ -1841,7 +1855,9 @@ function initWardenPortal() {
           disc3m: getNum('cfgDisc3m', 5),
           disc6m: getNum('cfgDisc6m', 10),
           disc12m: getNum('cfgDisc12m', 15),
-          securityDeposit: getNum('cfgSecurityDeposit', 5400)
+          securityDeposit: getNum('cfgSecurityDeposit', 5400),
+          dailyRate: getNum('cfgDailyRate', 350),
+          dailyAcAdd: getNum('cfgDailyAcAdd', 100)
         },
         texts: {
           hostelName: getTxt('cfgHostelName', 'Chaitanya Mens PG & Hostel'),
@@ -1911,6 +1927,7 @@ function initWardenPortal() {
         ['cfgDoubleBase', '2 sharing rent'], ['cfgTripleBase', '3 sharing rent'],
         ['cfgFourBase', '4 sharing rent'],   ['cfgFiveBase', '5 sharing rent'],
         ['cfgSecurityDeposit', 'Security deposit'],
+        ['cfgDailyRate', 'Daily stay base rent'], ['cfgDailyAcAdd', 'Daily stay AC charge'],
       ]) {
         const el = document.getElementById(id);
         if (!el) continue;
@@ -3579,7 +3596,13 @@ function initPricingToggle() {
 function initRoomCalculator() {
   const roomButtons = document.querySelectorAll('#calcRoomOptions .option-card');
   const climateRadios = document.querySelectorAll('input[name="calcClimate"]');
-  const durationButtons = document.querySelectorAll('#calcDurationOptions .duration-btn');
+  const durationButtons = document.querySelectorAll('#calcDurationOptions .duration-btn[data-months]');
+  const durBtnDaily = document.getElementById('durBtnDaily');
+  const dailyStayPicker = document.getElementById('dailyStayPicker');
+  const dailyDaysInput = document.getElementById('dailyDaysInput');
+  const dailyStepDecr = document.getElementById('dailyStepDecr');
+  const dailyStepIncr = document.getElementById('dailyStepIncr');
+  const dailyPresetBtns = document.querySelectorAll('.daily-preset-btn');
   const preferredFloorSelect = document.getElementById('preferredFloor');
   const acPillLabel = document.getElementById('acPillLabel');
 
@@ -3588,6 +3611,7 @@ function initRoomCalculator() {
   const dispAcCost = document.getElementById('dispAcCost');
   const dispDiscountRow = document.getElementById('dispDiscountRow');
   const dispDiscountVal = document.getElementById('dispDiscountVal');
+  const dispSubtotalLabel = document.getElementById('dispSubtotalLabel');
   const dispMonthlyTotal = document.getElementById('dispMonthlyTotal');
   const dispSecurityDeposit = document.getElementById('dispSecurityDeposit');
   const dispMoveInTotal = document.getElementById('dispMoveInTotal');
@@ -3607,6 +3631,8 @@ function initRoomCalculator() {
   let currentClimate = 'nonac';
   let currentDiscountRate = 0;
   let currentDurationMonths = 1;
+  let isDailyStay = false;
+  let currentDailyDays = 1;
 
   const roomNames = {
     double: '2 Sharing',
@@ -3624,24 +3650,61 @@ function initRoomCalculator() {
 
   function recalculate() {
     const isAc = (currentClimate === 'ac');
+    const cfg = getHostelConfig();
+    const formatInr = (n) => '₹' + n.toLocaleString('en-IN');
+
+    // === Day-Wise Stay Calculation ===
+    if (isDailyStay) {
+      const dailyBase = Number(cfg?.pricing?.dailyRate) || 350;
+      const dailyAc = Number(cfg?.pricing?.dailyAcAdd) || 100;
+      const acCost = isAc ? dailyAc : 0;
+      const dailyPerDay = dailyBase + acCost;
+      const stayTotal = dailyPerDay * currentDailyDays;
+      const securityDeposit = 0; // Deposit is completely waived for day-wise stay!
+      const initialMoveIn = stayTotal;
+
+      if (dispBaseRent) dispBaseRent.textContent = `${formatInr(dailyBase)} / day`;
+      if (dispAcCost) dispAcCost.textContent = acCost > 0 ? `+ ${formatInr(acCost)} / day` : '+ ₹0';
+      if (dispSubtotalLabel) dispSubtotalLabel.textContent = `Stay Tariff (${currentDailyDays}d)`;
+      if (dispMonthlyTotal) dispMonthlyTotal.textContent = formatInr(stayTotal);
+      if (dispDiscountRow) dispDiscountRow.style.display = 'none';
+      if (dispStayTotalRow) dispStayTotalRow.style.display = 'none';
+      if (dispSecurityDeposit) dispSecurityDeposit.textContent = '₹0 (Waived)';
+      if (dispMoveInTotal) dispMoveInTotal.textContent = formatInr(initialMoveIn);
+      if (dispMoveInScope) dispMoveInScope.textContent = `${currentDailyDays} day${currentDailyDays > 1 ? 's' : ''} stay tariff (no deposit required)`;
+
+      const activeRoomName = roomNames[currentRoom] || '2 Sharing';
+      const climateText = isAc ? 'AC' : 'Non-AC';
+
+      if (summaryRoomBadge) {
+        summaryRoomBadge.innerHTML = `<span class="summary-live-dot"></span> ${activeRoomName} • ${climateText} • Daily Stay`;
+      }
+
+      if (rsvSumRoom) rsvSumRoom.textContent = activeRoomName;
+      if (rsvSumClimate) rsvSumClimate.textContent = climateText;
+      if (rsvSumDuration) rsvSumDuration.textContent = `${currentDailyDays} Day${currentDailyDays > 1 ? 's' : ''} (Daily Stay)`;
+      if (rsvSumFloor && preferredFloorSelect) rsvSumFloor.textContent = preferredFloorSelect.value || 'Any Floor';
+      if (typeof window.updateChatQuote === 'function') {
+        window.updateChatQuote();
+      }
+      return;
+    }
+
+    // === Monthly Stay Calculation ===
     const acCost = isAc ? currentAcAdd : 0;
     const subtotal = currentBase + acCost;
     const discountAmount = Math.round(subtotal * currentDiscountRate);
     const effectiveMonthly = subtotal - discountAmount;
-    const cfg = getHostelConfig();
     const securityDeposit = (cfg && cfg.pricing && cfg.pricing.securityDeposit !== undefined && cfg.pricing.securityDeposit !== null)
       ? Number(cfg.pricing.securityDeposit)
       : 5400;
     const stayTotal = effectiveMonthly * currentDurationMonths;
     const initialMoveIn = stayTotal + securityDeposit;
 
-    const formatInr = (n) => '₹' + n.toLocaleString('en-IN');
-
     if (dispBaseRent) dispBaseRent.textContent = formatInr(currentBase);
     if (dispAcCost) dispAcCost.textContent = acCost > 0 ? `+ ${formatInr(acCost)}` : '+ ₹0';
+    if (dispSubtotalLabel) dispSubtotalLabel.textContent = 'Monthly Subtotal';
     
-    // The grand total IS the term's rent now, so a separate row for it
-    // would say the same number twice; the term goes on the total's label.
     if (dispStayTotalRow) dispStayTotalRow.style.display = 'none';
     if (dispMoveInScope) {
       dispMoveInScope.textContent = currentDurationMonths > 1
@@ -3652,10 +3715,6 @@ function initRoomCalculator() {
     if (dispDiscountRow && dispDiscountVal) {
       if (discountAmount > 0) {
         dispDiscountRow.style.display = 'flex';
-        /* The saving was quoted per month — "- ₹975 / mo" — while the figure
-           beside it was the whole term, so the discount read as 12x smaller
-           than it is. The rate is the same either way (15% off each month is
-           15% off the term), but at term scale it states the real number. */
         const termSaving = discountAmount * currentDurationMonths;
         dispDiscountVal.textContent = currentDurationMonths > 1
           ? `- ${formatInr(termSaving)} over ${currentDurationMonths} months (${Math.round(currentDiscountRate * 100)}%)`
@@ -3710,15 +3769,95 @@ function initRoomCalculator() {
     });
   });
 
+  // Monthly duration button clicks
   durationButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       durationButtons.forEach(b => b.classList.remove('active'));
+      if (durBtnDaily) durBtnDaily.classList.remove('active');
       btn.classList.add('active');
+
+      isDailyStay = false;
+      if (dailyStayPicker) dailyStayPicker.hidden = true;
 
       currentDurationMonths = parseInt(btn.dataset.months, 10) || 1;
       currentDiscountRate = parseFloat(btn.dataset.discount) || 0;
 
       recalculate();
+    });
+  });
+
+  // Daily Stay duration button click
+  if (durBtnDaily) {
+    durBtnDaily.addEventListener('click', () => {
+      durationButtons.forEach(b => b.classList.remove('active'));
+      durBtnDaily.classList.add('active');
+
+      isDailyStay = true;
+      if (dailyStayPicker) dailyStayPicker.hidden = false;
+
+      recalculate();
+    });
+  }
+
+  // Stepper & Preset buttons for Daily Stay
+  function updatePresetChips() {
+    dailyPresetBtns.forEach(pBtn => {
+      const d = parseInt(pBtn.dataset.days, 10);
+      pBtn.classList.toggle('active', d === currentDailyDays);
+    });
+  }
+
+  if (dailyDaysInput) {
+    dailyDaysInput.addEventListener('input', () => {
+      let val = parseInt(dailyDaysInput.value, 10);
+      if (isNaN(val) || val < 1) val = 1;
+      if (val > 30) val = 30;
+      currentDailyDays = val;
+      updatePresetChips();
+      recalculate();
+    });
+    dailyDaysInput.addEventListener('change', () => {
+      let val = parseInt(dailyDaysInput.value, 10);
+      if (isNaN(val) || val < 1) val = 1;
+      if (val > 30) val = 30;
+      dailyDaysInput.value = val;
+      currentDailyDays = val;
+      updatePresetChips();
+      recalculate();
+    });
+  }
+
+  if (dailyStepDecr) {
+    dailyStepDecr.addEventListener('click', () => {
+      if (currentDailyDays > 1) {
+        currentDailyDays--;
+        if (dailyDaysInput) dailyDaysInput.value = currentDailyDays;
+        updatePresetChips();
+        recalculate();
+      }
+    });
+  }
+
+  if (dailyStepIncr) {
+    dailyStepIncr.addEventListener('click', () => {
+      if (currentDailyDays < 30) {
+        currentDailyDays++;
+        if (dailyDaysInput) dailyDaysInput.value = currentDailyDays;
+        updatePresetChips();
+        recalculate();
+      }
+    });
+  }
+
+  dailyPresetBtns.forEach(pBtn => {
+    pBtn.addEventListener('click', () => {
+      const d = parseInt(pBtn.dataset.days, 10);
+      if (d) {
+        currentDailyDays = d;
+        if (dailyDaysInput) dailyDaysInput.value = d;
+        updatePresetChips();
+        recalculate();
+      }
     });
   });
 
@@ -3734,7 +3873,11 @@ function initRoomCalculator() {
       roomKey: currentRoom,
       roomName: roomNames[currentRoom] || 'Double Sharing',
       climate: (currentClimate === 'ac' && currentRoom !== 'hall') ? 'AC' : 'Non-AC',
-      duration: durationNames[currentDurationMonths] || '1 Month',
+      duration: isDailyStay
+        ? `${currentDailyDays} Day${currentDailyDays > 1 ? 's' : ''} (Daily Stay)`
+        : (durationNames[currentDurationMonths] || '1 Month'),
+      isDaily: isDailyStay,
+      dailyDays: isDailyStay ? currentDailyDays : null,
       effectiveMonthly: dispMonthlyTotal ? dispMonthlyTotal.textContent : '₹8,500'
     };
   };
@@ -3746,10 +3889,17 @@ function initRoomCalculator() {
       currentBase = parseInt(activeBtn.dataset.base, 10) || 8500;
       currentAcAdd = parseInt(activeBtn.dataset.acAdd, 10) || 0;
     }
-    const activeDur = document.querySelector('#calcDurationOptions .duration-btn.active');
-    if (activeDur) {
-      currentDurationMonths = parseInt(activeDur.dataset.months, 10) || 1;
-      currentDiscountRate = parseFloat(activeDur.dataset.discount) || 0;
+    if (durBtnDaily && durBtnDaily.classList.contains('active')) {
+      isDailyStay = true;
+      if (dailyStayPicker) dailyStayPicker.hidden = false;
+    } else {
+      const activeDur = document.querySelector('#calcDurationOptions .duration-btn[data-months].active');
+      if (activeDur) {
+        isDailyStay = false;
+        if (dailyStayPicker) dailyStayPicker.hidden = true;
+        currentDurationMonths = parseInt(activeDur.dataset.months, 10) || 1;
+        currentDiscountRate = parseFloat(activeDur.dataset.discount) || 0;
+      }
     }
     recalculate();
   };
@@ -4480,7 +4630,8 @@ function initBookingForm() {
     const bookingPricing = calculateInvoicePricing({
       room: `${sel.roomName} (${sel.climate})`,
       climate: sel.climate,
-      duration: sel.duration
+      duration: sel.duration,
+      is_daily: sel.isDaily
     }, pricing);
 
     const monthlyTotalStr = document.getElementById('dispMonthlyTotal')?.textContent?.trim() || `₹${bookingPricing.monthlyRent.toLocaleString('en-IN')}`;
@@ -4498,6 +4649,8 @@ function initBookingForm() {
       climate: sel.climate,
       date: moveInDateDisplay ? moveInDateDisplay.value : moveInDate.value,
       duration: sel.duration,
+      is_daily: !!sel.isDaily,
+      daily_days: sel.dailyDays || null,
       workplace: workplace ? workplace.value.trim() : '',
       email: cleanEmail.toLowerCase(),
       id_type: idTypeVal,
@@ -5776,7 +5929,9 @@ function openDirectWhatsAppPopup() {
   const depositText = dispDeposit ? dispDeposit.textContent.trim() : '₹1,000';
   const monthlyText = sel.effectiveMonthly || '₹8,500';
 
-  const message = `Hi Chaitanya Mens PG & Hostel Manager, I'm interested in reserving a bed for ${sel.roomName} (${sel.climate}), duration: ${sel.duration} (Rent: ${monthlyText}/mo, Deposit: ${depositText}). Are beds available?`;
+  const message = sel.isDaily
+    ? `Hi Chaitanya Mens PG & Hostel Manager, I'm interested in reserving a bed for ${sel.roomName} (${sel.climate}), duration: ${sel.duration} (Tariff: ${monthlyText}, Deposit: ${depositText}). Are beds available?`
+    : `Hi Chaitanya Mens PG & Hostel Manager, I'm interested in reserving a bed for ${sel.roomName} (${sel.climate}), duration: ${sel.duration} (Rent: ${monthlyText}/mo, Deposit: ${depositText}). Are beds available?`;
 
   const waUrl = `https://api.whatsapp.com/send?phone=919949785344&text=${encodeURIComponent(message)}`;
 

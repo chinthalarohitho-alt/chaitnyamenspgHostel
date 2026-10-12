@@ -96,20 +96,38 @@ export function calculateInvoicePricing(b = {}, p = {}) {
   const subtotal = baseRent + acCost;
 
   const durStr = String(b.duration || '1 Month');
-  const durMonths = parseInt(durStr.replace(/[^\d]/g, ''), 10) || 1;
+  const isDaily = Boolean(b.is_daily || b.isDaily || durStr.toLowerCase().includes('day'));
+  let durDays = 1;
+  let durMonths = 1;
   let discountRate = 0;
-  if (durMonths >= 12) discountRate = (Number(pricing.disc12m) || 15) / 100;
-  else if (durMonths >= 6) discountRate = (Number(pricing.disc6m) || 10) / 100;
-  else if (durMonths >= 3) discountRate = (Number(pricing.disc3m) || 5) / 100;
+  let discountAmount = 0;
+  let calculatedRent = 0;
+  let securityDeposit = 0;
+  let dailyRate = 0;
 
-  const discountAmount = Math.round(subtotal * discountRate);
-  const calculatedMonthly = subtotal - discountAmount;
-  const securityDeposit = (pricing.securityDeposit !== undefined && pricing.securityDeposit !== null)
-    ? Number(pricing.securityDeposit)
-    : 5400;
-  const stayTotal = calculatedMonthly * durMonths;
+  if (isDaily) {
+    durDays = parseInt(durStr.replace(/[^\d]/g, ''), 10) || 1;
+    const dailyBase = Number(pricing.dailyRate) || 350;
+    const dailyAc = Number(pricing.dailyAcAdd) || 100;
+    dailyRate = dailyBase + (isAc ? dailyAc : 0);
+    calculatedRent = dailyRate * durDays;
+    securityDeposit = 0; // Deposit waived for day-wise stays
+  } else {
+    durMonths = parseInt(durStr.replace(/[^\d]/g, ''), 10) || 1;
+    if (durMonths >= 12) discountRate = (Number(pricing.disc12m) || 15) / 100;
+    else if (durMonths >= 6) discountRate = (Number(pricing.disc6m) || 10) / 100;
+    else if (durMonths >= 3) discountRate = (Number(pricing.disc3m) || 5) / 100;
+
+    discountAmount = Math.round(subtotal * discountRate);
+    calculatedRent = subtotal - discountAmount;
+    securityDeposit = (pricing.securityDeposit !== undefined && pricing.securityDeposit !== null)
+      ? Number(pricing.securityDeposit)
+      : 5400;
+  }
+
+  const stayTotal = isDaily ? calculatedRent : calculatedRent * durMonths;
   const moveInTotal = stayTotal + securityDeposit;
-  let termSavings = discountAmount * durMonths;
+  let termSavings = isDaily ? 0 : discountAmount * durMonths;
   if (b.term_savings) {
     const rawS = parseInt(String(b.term_savings).replace(/[^\d]/g, ''), 10);
     if (!isNaN(rawS) && rawS > 0) termSavings = rawS;
@@ -117,7 +135,7 @@ export function calculateInvoicePricing(b = {}, p = {}) {
 
   // Preserve locked-in booking price if recorded on the booking record;
   // fall back to configured calculated rate for new bookings.
-  let finalMonthly = calculatedMonthly;
+  let finalMonthly = calculatedRent;
   if (b.monthly_rent || b.monthly) {
     const rawM = parseInt(String(b.monthly_rent || b.monthly).replace(/[^\d]/g, ''), 10);
     if (!isNaN(rawM) && rawM > 0) finalMonthly = rawM;
@@ -126,10 +144,10 @@ export function calculateInvoicePricing(b = {}, p = {}) {
   let finalDeposit = securityDeposit;
   if (b.security_deposit || b.deposit) {
     const rawD = parseInt(String(b.security_deposit || b.deposit).replace(/[^\d]/g, ''), 10);
-    if (!isNaN(rawD) && rawD > 0) finalDeposit = rawD;
+    if (!isNaN(rawD) && rawD >= 0) finalDeposit = rawD;
   }
 
-  let finalMoveIn = (finalMonthly * durMonths) + finalDeposit;
+  let finalMoveIn = isDaily ? finalMonthly : (finalMonthly * durMonths) + finalDeposit;
   if (b.payable_move_in || b.payableOnMoveIn) {
     const rawP = parseInt(String(b.payable_move_in || b.payableOnMoveIn).replace(/[^\d]/g, ''), 10);
     if (!isNaN(rawP) && rawP > 0) finalMoveIn = rawP;
@@ -139,7 +157,10 @@ export function calculateInvoicePricing(b = {}, p = {}) {
     baseRent,
     acCost,
     isAc,
+    isDaily,
+    durDays,
     durMonths,
+    dailyRate,
     discountRate,
     termSavings: termSavings > 0 ? termSavings : 0,
     monthlyRent: finalMonthly,
@@ -339,9 +360,49 @@ export async function buildInvoicePdfDoc(b, h = {}) {
     { label: 'Climate / Ventilation Plan', val: b.climate || (calc.isAc ? 'AC' : 'Non-AC') },
     { label: 'Preferred Floor', val: b.floor || 'Any Floor' },
     { label: 'Scheduled Move-In Date', val: b.date || b.move_in_date || '-' },
-    { label: 'Intended Stay Duration', val: b.duration || (calc.durMonths + ' Month' + (calc.durMonths > 1 ? 's' : '')) },
-    { label: 'Monthly Subtotal (Rent)', val: 'Rs. ' + calc.monthlyRent.toLocaleString('en-IN') + ' / mo' },
   ];
+
+  if (calc.isDaily) {
+    tableRows.push({
+      label: 'Intended Stay Duration',
+      val: b.duration || `${calc.durDays} Day${calc.durDays > 1 ? 's' : ''} (Daily Stay)`
+    });
+    tableRows.push({
+      label: 'Daily Tariff Rate',
+      val: 'Rs. ' + calc.dailyRate.toLocaleString('en-IN') + ' / day'
+    });
+    tableRows.push({
+      label: 'Stay Rent Subtotal',
+      val: 'Rs. ' + calc.monthlyRent.toLocaleString('en-IN')
+    });
+    tableRows.push({
+      label: 'Security Deposit (Waived)',
+      val: 'Rs. 0 (Not applicable)',
+      note: 'No security deposit required for day-wise stay'
+    });
+  } else {
+    tableRows.push({
+      label: 'Intended Stay Duration',
+      val: b.duration || (calc.durMonths + ' Month' + (calc.durMonths > 1 ? 's' : ''))
+    });
+    tableRows.push({
+      label: 'Monthly Subtotal (Rent)',
+      val: 'Rs. ' + calc.monthlyRent.toLocaleString('en-IN') + ' / mo'
+    });
+    const termSavingsVal = (b.term_savings ? parseInt(String(b.term_savings).replace(/[^\d]/g, ''), 10) : 0) || calc.termSavings;
+    if (termSavingsVal > 0) {
+      tableRows.push({
+        label: 'Long-term Savings / Discount',
+        val: b.term_savings ? cleanStr(b.term_savings) : `- Rs. ${termSavingsVal.toLocaleString('en-IN')}`,
+        highlight: DEEP_GREEN,
+      });
+    }
+    tableRows.push({
+      label: 'Security Deposit (100% Refundable)',
+      val: depositStr,
+      note: 'Refunded upon move-out',
+    });
+  }
 
   if (b.id_type || b.id_number) {
     tableRows.push({
@@ -351,26 +412,10 @@ export async function buildInvoicePdfDoc(b, h = {}) {
     });
   }
 
-
-  const termSavingsVal = (b.term_savings ? parseInt(String(b.term_savings).replace(/[^\d]/g, ''), 10) : 0) || calc.termSavings;
-  if (termSavingsVal > 0) {
-    tableRows.push({
-      label: 'Long-term Savings / Discount',
-      val: b.term_savings ? cleanStr(b.term_savings) : `- Rs. ${termSavingsVal.toLocaleString('en-IN')}`,
-      highlight: DEEP_GREEN,
-    });
-  }
-
   tableRows.push({
-    label: 'Security Deposit (100% Refundable)',
-    val: depositStr,
-    note: 'Refunded upon move-out',
-  });
-
-  tableRows.push({
-    label: 'Total Move-In Charges',
+    label: calc.isDaily ? 'Total Move-In Tariff' : 'Total Move-In Charges',
     val: totalPayableStr,
-    sub: b.move_in_scope || (calc.durMonths > 1 ? `${calc.durMonths} months' rent + deposit` : "First month's rent + deposit"),
+    sub: b.move_in_scope || (calc.isDaily ? `${calc.durDays} days stay tariff (no deposit)` : (calc.durMonths > 1 ? `${calc.durMonths} months' rent + deposit` : "First month's rent + deposit")),
   });
 
   if (isAccepted) {

@@ -1678,7 +1678,7 @@ ul {
 
 .duration-selector {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
 }
 
@@ -1731,6 +1731,134 @@ ul {
   font-weight: 700;
   padding: 2px 7px;
   border-radius: var(--radius-full);
+}
+
+/* 📅 Daily Stay Interactive Picker */
+.daily-stay-picker {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: rgba(255, 107, 0, 0.08);
+  border: 1px solid rgba(255, 107, 0, 0.35);
+  border-radius: 12px;
+  animation: dailyFadeIn 0.25s ease-out;
+}
+
+@keyframes dailyFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.daily-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.daily-picker-header i {
+  color: #ff8533;
+  margin-right: 4px;
+}
+
+.daily-rate-tag {
+  background: rgba(255, 107, 0, 0.2);
+  border: 1px solid rgba(255, 107, 0, 0.45);
+  color: #ff8533;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.daily-stepper-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.daily-step-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.daily-step-btn:hover {
+  background: #ff6b00;
+  border-color: #ff6b00;
+  transform: scale(1.08);
+}
+
+.daily-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 107, 0, 0.45);
+  border-radius: 10px;
+  padding: 4px 14px;
+}
+
+.daily-input-wrap input {
+  width: 44px;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  font-family: inherit;
+}
+
+.daily-days-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.daily-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.daily-preset-btn {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.daily-preset-btn:hover {
+  border-color: rgba(255, 107, 0, 0.4);
+  color: #ffffff;
+}
+
+.daily-preset-btn.active {
+  background: rgba(255, 107, 0, 0.24);
+  border-color: #ff6b00;
+  color: #ff8533;
+  font-weight: 700;
 }
 
 /* ===================================================================
@@ -9575,11 +9703,15 @@ select:autofill {
     font-size: 0.88rem;
   }
 
-  /* ---- Step 3: duration as a 2x2 grid ---- */
+  /* ---- Step 3: duration on mobile ---- */
   .duration-selector {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
+  }
+
+  .duration-selector #durBtnDaily {
+    grid-column: span 2;
   }
 
   .duration-btn {
