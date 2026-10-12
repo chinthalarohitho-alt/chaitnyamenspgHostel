@@ -3929,23 +3929,56 @@ function initBookingForm() {
 
   let currentIdProof = null; // { dataUrl: string, name: string, sizeStr: string, isPdf: boolean, verified: boolean }
 
+  // Official UIDAI Verhoeff Checksum Tables
+  const verhoeffD = [
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    [1, 2, 3, 4, 0, 6, 7, 8, 9, 5],
+    [2, 3, 4, 0, 1, 7, 8, 9, 5, 6],
+    [3, 4, 0, 1, 2, 8, 9, 5, 6, 7],
+    [4, 0, 1, 2, 3, 9, 5, 6, 7, 8],
+    [5, 9, 8, 7, 6, 0, 4, 3, 2, 1],
+    [6, 5, 9, 8, 7, 1, 0, 4, 3, 2],
+    [7, 6, 5, 9, 8, 2, 1, 0, 4, 3],
+    [8, 7, 6, 5, 9, 3, 2, 1, 0, 4],
+    [9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+  ];
+  const verhoeffP = [
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+    [1, 5, 7, 6, 2, 8, 3, 0, 9, 4],
+    [5, 8, 0, 3, 7, 9, 6, 1, 4, 2],
+    [8, 9, 1, 6, 0, 4, 3, 5, 2, 7],
+    [9, 4, 5, 3, 1, 2, 6, 8, 7, 0],
+    [4, 2, 8, 6, 5, 7, 3, 9, 0, 1],
+    [2, 7, 9, 3, 8, 0, 6, 4, 1, 5],
+    [7, 0, 4, 6, 9, 1, 3, 2, 5, 8]
+  ];
+
+  function checkVerhoeff(str) {
+    let c = 0;
+    const rev = String(str).replace(/\D/g, '').split('').reverse().map(Number);
+    for (let i = 0; i < rev.length; i++) {
+      c = verhoeffD[c][verhoeffP[i % 8][rev[i]]];
+    }
+    return c === 0;
+  }
+
   const updateIdPlaceholder = () => {
     if (!guestIdType || !guestIdNumber) return;
     const type = guestIdType.value;
     if (type === 'Aadhaar Card') {
-      guestIdNumber.placeholder = 'Enter 12-digit Aadhaar number';
+      guestIdNumber.placeholder = '12-digit Aadhaar number';
       guestIdNumber.setAttribute('maxlength', '14'); // allows "XXXX XXXX XXXX"
     } else if (type === 'PAN Card') {
-      guestIdNumber.placeholder = 'Enter 10-character PAN (e.g. ABCDE1234F)';
+      guestIdNumber.placeholder = '10-character PAN number';
       guestIdNumber.setAttribute('maxlength', '10');
     } else if (type === 'Driving License') {
-      guestIdNumber.placeholder = 'Enter Driving License number';
+      guestIdNumber.placeholder = 'Driving License number';
       guestIdNumber.removeAttribute('maxlength');
     } else if (type === 'Voter ID') {
-      guestIdNumber.placeholder = 'Enter Voter ID (EPIC) number';
+      guestIdNumber.placeholder = 'Voter ID (EPIC) number';
       guestIdNumber.removeAttribute('maxlength');
     } else if (type === 'Passport') {
-      guestIdNumber.placeholder = 'Enter Passport number (e.g. A1234567)';
+      guestIdNumber.placeholder = 'Passport (e.g. A1234567)';
       guestIdNumber.setAttribute('maxlength', '8');
     }
     guestIdNumber.classList.remove('is-invalid');
@@ -3985,18 +4018,21 @@ function initBookingForm() {
       if (digits.length !== 12) {
         return { ok: false, error: 'Aadhaar number must be exactly 12 digits.' };
       }
-      if (/^([0-9])\1{11}$/.test(digits) || digits === '123456789012') {
-        return { ok: false, error: 'Please enter a valid, authentic Aadhaar number.' };
+      if (/^([0-9])\1{11}$/.test(digits) || digits === '123456789012' || digits === '987654321098') {
+        return { ok: false, error: 'Please enter an authentic 12-digit Aadhaar number.' };
       }
       if (digits[0] === '0' || digits[0] === '1') {
-        return { ok: false, error: 'Aadhaar number cannot start with 0 or 1.' };
+        return { ok: false, error: 'Aadhaar number cannot start with 0 or 1 per UIDAI rules.' };
+      }
+      if (!checkVerhoeff(digits)) {
+        return { ok: false, error: 'Invalid Aadhaar number (checksum validation failed).' };
       }
       return { ok: true, value: digits, formatted: digits.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3') };
     }
     if (type === 'PAN Card') {
       const clean = raw.toUpperCase().replace(/\s+/g, '');
-      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(clean)) {
-        return { ok: false, error: 'Invalid PAN format. Must be 5 letters, 4 numbers, 1 letter (e.g. ABCDE1234F).' };
+      if (!/^[A-Z]{3}[PCHFATBLJG][A-Z][0-9]{4}[A-Z]$/.test(clean)) {
+        return { ok: false, error: 'Invalid PAN format. Must be 10 characters (e.g. ABCDE1234F).' };
       }
       return { ok: true, value: clean, formatted: clean };
     }
@@ -4085,7 +4121,7 @@ function initBookingForm() {
     // 2. Minimum size check (must be at least 15KB to avoid blank or corrupted files)
     if (file.size < 15 * 1024) {
       if (idFileError) {
-        idFileError.textContent = 'Uploaded file is too small or blank (under 15KB). Please upload a clear, legible photo of your ID.';
+        idFileError.textContent = 'Uploaded file is too small or blank (under 15KB). Please upload a clear photo of your ID.';
         idFileError.style.display = 'flex';
       }
       if (idUploadDropzone) idUploadDropzone.classList.add('is-invalid');
@@ -4104,13 +4140,13 @@ function initBookingForm() {
       return;
     }
 
-    // 4. Resolution check for images (minimum 280x180 px for legibility)
+    // 4. Resolution and Document Shape Checks for Images
     if (isImage) {
       const dimensions = await new Promise((resolve) => {
         const tempReader = new FileReader();
         tempReader.onload = (e) => {
           const img = new Image();
-          img.onload = () => resolve({ width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
+          img.onload = () => resolve({ width: img.naturalWidth || img.width, height: img.naturalHeight || img.height, src: e.target.result });
           img.onerror = () => resolve(null);
           img.src = e.target.result;
         };
@@ -4131,7 +4167,19 @@ function initBookingForm() {
       const { width, height } = dimensions;
       if (width < 280 || height < 180) {
         if (idFileError) {
-          idFileError.textContent = `Photo resolution is too low (${width}x${height}px). Please upload a clear, legible photo of at least 300x200 pixels.`;
+          idFileError.textContent = `Photo resolution is too low (${width}x${height}px). Please upload a clear photo of at least 300x200 pixels.`;
+          idFileError.style.display = 'flex';
+        }
+        if (idUploadDropzone) idUploadDropzone.classList.add('is-invalid');
+        if (guestIdFile) guestIdFile.value = '';
+        return;
+      }
+
+      // Check portrait orientation: Physical ID cards are horizontal landscape (Aadhaar, PAN, DL, Voter ID, Passport).
+      // If height > width * 1.35, it's a vertical room/selfie/wall photo (like the bathroom image).
+      if (height > width * 1.35) {
+        if (idFileError) {
+          idFileError.textContent = 'Please upload a horizontal (landscape) photo of your ID card. Vertical room or scenery photos cannot be verified.';
           idFileError.style.display = 'flex';
         }
         if (idUploadDropzone) idUploadDropzone.classList.add('is-invalid');
@@ -4143,6 +4191,45 @@ function initBookingForm() {
       if (ratio > 4.5) {
         if (idFileError) {
           idFileError.textContent = 'The uploaded image aspect ratio is irregular. Please upload a clear photo of your ID card.';
+          idFileError.style.display = 'flex';
+        }
+        if (idUploadDropzone) idUploadDropzone.classList.add('is-invalid');
+        if (guestIdFile) guestIdFile.value = '';
+        return;
+      }
+
+      // Document Contrast & Content Check using Canvas
+      const hasContent = await new Promise((resolve) => {
+        try {
+          const testCanvas = document.createElement('canvas');
+          testCanvas.width = 160;
+          testCanvas.height = 100;
+          const tCtx = testCanvas.getContext('2d');
+          const tImg = new Image();
+          tImg.onload = () => {
+            tCtx.drawImage(tImg, 0, 0, 160, 100);
+            const data = tCtx.getImageData(0, 0, 160, 100).data;
+            let minLuma = 255;
+            let maxLuma = 0;
+            for (let i = 0; i < data.length; i += 4) {
+              const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+              if (luma < minLuma) minLuma = luma;
+              if (luma > maxLuma) maxLuma = luma;
+            }
+            const contrast = maxLuma - minLuma;
+            // Legitimate documents have contrast between dark text and light paper/card
+            resolve(contrast >= 35);
+          };
+          tImg.onerror = () => resolve(true);
+          tImg.src = dimensions.src;
+        } catch (_) {
+          resolve(true);
+        }
+      });
+
+      if (!hasContent) {
+        if (idFileError) {
+          idFileError.textContent = 'Image has insufficient contrast or appears blank. Please upload a clear photo of your physical ID card.';
           idFileError.style.display = 'flex';
         }
         if (idUploadDropzone) idUploadDropzone.classList.add('is-invalid');

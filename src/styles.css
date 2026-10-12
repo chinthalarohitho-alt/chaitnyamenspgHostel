@@ -2810,6 +2810,17 @@ select.rsv-input,
   gap: 5px;
 }
 
+.rsv-id-subfield .rsv-input {
+  font-size: 0.86rem;
+  padding: 10px 12px 10px 34px !important;
+  letter-spacing: 0.01em;
+}
+
+.rsv-id-subfield .rsv-input-wrap > i {
+  left: 12px;
+  font-size: 0.84rem;
+}
+
 .rsv-id-sublabel {
   font-size: 0.82rem;
   font-weight: 600;
