@@ -2759,7 +2759,7 @@ function renderEnquiriesTable() {
   if (bookings.length === 0) {
     const blank = {
       action:   ['No pending requests', 'New resident booking enquiries will appear here for review and acceptance.'],
-      verified: ['No accepted bookings yet', 'Once you accept a booking and verify the bank UTR, it moves here and an invoice is emailed.'],
+      verified: ['No accepted bookings yet', 'Once you accept a booking, it moves here and an invoice is emailed.'],
       rejected: ['No rejected requests', 'Enquiries that you rejected will be listed here.'],
       all:      ['No enquiries yet', 'New booking requests from the website land here automatically.']
     }[enquiryFilter] || ['No enquiries', 'No bookings found.'];
@@ -2794,22 +2794,8 @@ function renderEnquiriesTable() {
           activeInlineAction = null;
         } else {
           activeInlineAction = { ref, type: 'accept' };
-          const b = getStoredBookings().find(x => x.ref === ref);
-          const repUtr = (b?.utr || b?.upi_utr || '').trim();
-          if (activeUtrValues[ref] === undefined && repUtr) {
-            activeUtrValues[ref] = repUtr;
-          }
         }
         renderEnquiriesTable();
-        if (activeInlineAction && activeInlineAction.type === 'accept') {
-          setTimeout(() => {
-            const inp = document.getElementById(`inlineUtr-${ref}`);
-            if (inp) {
-              inp.focus();
-              inp.select?.();
-            }
-          }, 60);
-        }
         return;
       }
 
@@ -2834,32 +2820,7 @@ function renderEnquiriesTable() {
         return;
       }
 
-      // 4. Quick fill resident's reported UTR
-      const quickBtn = e.target.closest('[data-inline-quick-utr]');
-      if (quickBtn) {
-        const ref = quickBtn.dataset.ref;
-        const quickVal = (quickBtn.dataset.inlineQuickUtr || '').trim();
-        if (ref && quickVal) {
-          activeUtrValues[ref] = quickVal;
-          const inp = document.getElementById(`inlineUtr-${ref}`);
-          const counter = document.getElementById(`inlineCounter-${ref}`);
-          const confirmBtn = document.querySelector(`[data-confirm-accept="${ref}"]`);
-          const errEl = document.getElementById(`inlineError-${ref}`);
-          if (inp) inp.value = quickVal;
-          if (counter) {
-            counter.textContent = quickVal.length ? `${quickVal.length} chars` : 'Optional';
-            counter.classList.toggle('is-valid', quickVal.length > 0);
-          }
-          if (confirmBtn) {
-            confirmBtn.disabled = false;
-          }
-          if (errEl) errEl.textContent = '';
-          if (inp) inp.focus();
-        }
-        return;
-      }
-
-      // 5. Confirm Accept Click
+      // 4. Confirm Accept Click
       const confirmAcceptBtn = e.target.closest('[data-confirm-accept]');
       if (confirmAcceptBtn) {
         const ref = confirmAcceptBtn.dataset.confirmAccept;
@@ -2871,9 +2832,8 @@ function renderEnquiriesTable() {
                        b.paymentMode === 'Cash on Hand' ||
                        String(b.payment_mode || b.paymentMode || '').toLowerCase().includes('cash');
 
-        const inp = document.getElementById(`inlineUtr-${ref}`);
         const errEl = document.getElementById(`inlineError-${ref}`);
-        const utr = (inp?.value !== undefined ? inp.value : (activeUtrValues[ref] || b.utr || b.upi_utr || '')).trim();
+        const utr = (b.utr || b.upi_utr || null);
 
         if (errEl) errEl.textContent = '';
 
@@ -3072,39 +3032,9 @@ function renderEnquiriesTable() {
       }
     });
 
-    // UTR typing & live counter (optional)
-    tbody.addEventListener('input', (e) => {
-      if (e.target.matches('.enq-inline-utr-input')) {
-        const inp = e.target;
-        const ref = inp.dataset.utrRef;
-        const val = inp.value.trim();
-        activeUtrValues[ref] = inp.value;
-
-        const counter = document.getElementById(`inlineCounter-${ref}`);
-        if (counter) {
-          counter.textContent = val.length ? `${val.length} chars` : 'Optional';
-          counter.classList.toggle('is-valid', val.length > 0);
-        }
-        const errEl = document.getElementById(`inlineError-${ref}`);
-        if (errEl) errEl.textContent = '';
-
-        const confirmBtn = document.querySelector(`[data-confirm-accept="${ref}"]`);
-        if (confirmBtn) {
-          confirmBtn.disabled = false;
-        }
-      }
-    });
-
-    // Enter key submits, Escape cancels
+    // Escape cancels active inline action
     tbody.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && e.target.matches('.enq-inline-utr-input')) {
-        e.preventDefault();
-        const ref = e.target.dataset.utrRef;
-        const confirmBtn = document.querySelector(`[data-confirm-accept="${ref}"]`);
-        if (confirmBtn && !confirmBtn.disabled) {
-          confirmBtn.click();
-        }
-      } else if (e.key === 'Escape' && activeInlineAction) {
+      if (e.key === 'Escape' && activeInlineAction) {
         activeInlineAction = null;
         renderEnquiriesTable();
       }
@@ -3222,58 +3152,36 @@ function renderEnquiriesTable() {
                         <span class="enq-pill-val highlight" style="color:#f59e0b;">${balVal}</span>
                       </div>
                     ` : ''}
-                    <div class="enq-pill">
-                      <span class="enq-pill-lbl">Advance UTR:</span>
-                      ${repCleanUtr ? `<span class="enq-pill-val text-green"><i class="fa-solid fa-check"></i> ${escapeHtml(repCleanUtr)}</span>` : `<span class="enq-pill-val" style="color:#94a3b8;font-style:italic;">Not reported</span>`}
-                    </div>
+                    ${repCleanUtr ? `
+                      <div class="enq-pill">
+                        <span class="enq-pill-lbl">Advance UTR:</span>
+                        <span class="enq-pill-val text-green"><i class="fa-solid fa-receipt"></i> ${escapeHtml(repCleanUtr)}</span>
+                      </div>
+                    ` : ''}
                   ` : `
                     <div class="enq-pill">
-                      <span class="enq-pill-lbl">Applicant UTR:</span>
-                      ${repCleanUtr ? `<span class="enq-pill-val text-green"><i class="fa-solid fa-check"></i> ${escapeHtml(repCleanUtr)}</span>` : `<span class="enq-pill-val" style="color:#94a3b8;font-style:italic;">Not reported</span>`}
+                      <span class="enq-pill-lbl">Payment Mode:</span>
+                      <span class="enq-pill-val highlight"><i class="fa-solid fa-bolt"></i> UPI Transfer</span>
                     </div>
+                    ${repCleanUtr ? `
+                      <div class="enq-pill">
+                        <span class="enq-pill-lbl">Applicant UTR:</span>
+                        <span class="enq-pill-val text-green"><i class="fa-solid fa-receipt"></i> ${escapeHtml(repCleanUtr)}</span>
+                      </div>
+                    ` : ''}
                   `}
                 </div>
 
                 ${isCash ? `
-                  <div class="cash-confirmed-box" style="margin-top:12px; margin-bottom:12px;">
+                  <div class="cash-confirmed-box" style="margin-top:10px; margin-bottom:12px;">
                     <div style="display:flex; align-items:center; gap:8px; font-weight:700; color:#38bdf8;">
-                      <i class="fa-solid fa-hand-holding-dollar"></i> Cash on Hand Verification
+                      <i class="fa-solid fa-hand-holding-dollar"></i> Cash on Hand Reservation
                     </div>
-                    <p style="margin:6px 0 0; font-size:0.83rem; color:var(--text-muted); line-height:1.5;">
-                      Guest will pay <strong>${payableAmt}</strong> in cash directly to the manager upon arrival. Confirm to verify reservation and generate the official Cash on Hand invoice.
+                    <p style="margin:4px 0 0; font-size:0.83rem; color:var(--text-muted); line-height:1.5;">
+                      Guest will pay <strong>${payableAmt}</strong> in cash directly upon arrival. Click below to verify reservation and generate the invoice.
                     </p>
                   </div>
-                ` : `
-                  <div class="enq-inline-input-area">
-                    <label class="enq-inline-label" for="inlineUtr-${b.ref}">
-                      <strong>${isAdvance ? `Bank Transaction Reference (UTR) for ${advVal} Advance Token (Optional)` : 'Bank Transaction Reference (UTR) (Optional)'}</strong>
-                      <span>${isAdvance ? 'Optional reference from bank credit alert or UPI receipt' : 'Optional reference from bank credit alert or UPI receipt'}</span>
-                    </label>
-                    <div class="enq-inline-input-row">
-                      <input
-                        type="text"
-                        id="inlineUtr-${b.ref}"
-                        class="enq-inline-utr-input"
-                        placeholder="e.g. 523418902412 (Optional)"
-                        autocomplete="off"
-                        spellcheck="false"
-                        data-utr-ref="${b.ref}"
-                        value="${escapeHtml(curUtr)}"
-                      />
-                      <span class="enq-inline-counter ${curUtr ? 'is-valid' : ''}" id="inlineCounter-${b.ref}">
-                        ${curUtr ? `${curUtr.length} chars` : 'Optional'}
-                      </span>
-                    </div>
-
-                    ${repCleanUtr ? `
-                      <button type="button" class="enq-inline-quick-btn" data-inline-quick-utr="${escapeHtml(repCleanUtr)}" data-ref="${b.ref}">
-                        <i class="fa-solid fa-paste"></i> Use applicant-reported UTR (<strong>${escapeHtml(repCleanUtr)}</strong>)
-                      </button>
-                    ` : ''}
-
-                    <div class="enq-inline-error" id="inlineError-${b.ref}"></div>
-                  </div>
-                `}
+                ` : ''}
 
                 <div class="enq-inline-actions">
                   <button
