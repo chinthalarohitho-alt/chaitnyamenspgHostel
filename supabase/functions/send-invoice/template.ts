@@ -6,7 +6,7 @@
  * and web-safe fonts only — no flexbox, no grid, no external CSS.
  */
 
-import { calculateStayPeriod } from "./invoice-pdf.ts";
+import { calculateStayPeriod, normalizeBookingDate } from "./invoice-pdf.ts";
 
 export interface Booking {
   ref: string;
@@ -57,7 +57,8 @@ function row(label: string, value: string, last = false) {
 
 /** Plain-text alternative. Every email should carry one. */
 export function invoiceText(b: Booking, h: Hostel, forManager = false, hasPdf = false, isReceipt = false): string {
-  const stayPeriod = b.stay_period || (b.move_in_date ? calculateStayPeriod(b.move_in_date, b.duration) : null);
+  const safeMoveIn = normalizeBookingDate(b.move_in_date);
+  const stayPeriod = b.stay_period ? normalizeBookingDate(b.stay_period) : (safeMoveIn ? calculateStayPeriod(safeMoveIn, b.duration) : null);
   const isCash = b.payment_mode === "cash" || String(b.payment_mode || "").toLowerCase().includes("cash");
   const isAdvance = b.payment_mode === "advance" || String(b.payment_mode || "").toLowerCase().includes("advance");
   const advStr = b.advance_amount ? `Rs. ${Number(b.advance_amount).toLocaleString("en-IN")}` : "Rs. 1,000";
@@ -83,7 +84,7 @@ export function invoiceText(b: Booking, h: Hostel, forManager = false, hasPdf = 
     `Payment Option: ${paymentOptionText}`,
     b.room ? `Room: ${b.room}` : ``,
     b.floor ? `Preferred floor: ${b.floor}` : ``,
-    b.move_in_date ? `Move-in: ${b.move_in_date}` : ``,
+    safeMoveIn ? `Move-in: ${safeMoveIn}` : ``,
     stayPeriod ? `Stay Period: ${stayPeriod}` : ``,
     b.duration ? `Stay: ${b.duration}` : ``,
     b.monthly_rent ? `Monthly Rent: ${b.monthly_rent} / mo` : ``,
@@ -140,7 +141,8 @@ export function invoiceHtml(b: Booking, h: Hostel, forManager = false, hasPdf = 
         ? `A new enquiry came in from the website. Payment option: ${isCash ? "Cash on Hand" : (isAdvance ? "Advance Token" : "UPI Transfer")}.`
         : `Thanks ${first} — here are your enquiry details. Keep the reference handy for your visit.`);
 
-  const stayPeriod = b.stay_period || (b.move_in_date ? calculateStayPeriod(b.move_in_date, b.duration) : null);
+  const safeMoveIn = normalizeBookingDate(b.move_in_date);
+  const stayPeriod = b.stay_period ? normalizeBookingDate(b.stay_period) : (safeMoveIn ? calculateStayPeriod(safeMoveIn, b.duration) : null);
   const waLink = `https://wa.me/${esc(h.whatsapp)}?text=${encodeURIComponent(`Hello, my booking reference is ${b.ref}`)}`;
 
   const paymentOptionDisplay = isCash
@@ -159,7 +161,7 @@ export function invoiceHtml(b: Booking, h: Hostel, forManager = false, hasPdf = 
 <body style="margin:0;padding:0;background:#f4f5f7;">
   <!-- preheader: shown in the inbox list, hidden in the body -->
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
-    ${esc(b.ref)} · ${esc(b.room || "Bed enquiry")} · ${esc(b.move_in_date || "")}
+    ${esc(b.ref)} · ${esc(b.room || "Bed enquiry")} · ${esc(safeMoveIn || "")}
   </div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:24px 12px;">
@@ -203,7 +205,7 @@ export function invoiceHtml(b: Booking, h: Hostel, forManager = false, hasPdf = 
               ${isReceipt && b.upi_utr ? row("UPI reference", b.upi_utr) : ""}
               ${b.room ? row("Room", b.room) : ""}
               ${b.floor ? row("Preferred floor", b.floor) : ""}
-              ${b.move_in_date ? row("Move-in date", b.move_in_date) : ""}
+              ${safeMoveIn ? row("Move-in date", safeMoveIn) : ""}
               ${stayPeriod ? row("Stay period", stayPeriod) : ""}
               ${b.duration ? row("Stay duration", b.duration) : ""}
               ${b.monthly_rent ? row("Monthly Rent", `${b.monthly_rent} / mo`) : ""}

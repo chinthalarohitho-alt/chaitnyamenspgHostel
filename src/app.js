@@ -26,7 +26,7 @@ import heroExteriorUrl from './assets/hostel-exterior.jpg';
 
 import { mountLottie, destroyLottie } from './lottie-anim.js';
 import { buildUpiUri, renderQr, submitUtr, setBookingEmail } from './upi-token.js';
-import { downloadInvoicePdf, calculateInvoicePricing, calculateStayPeriod } from './invoice-pdf.js';
+import { downloadInvoicePdf, calculateInvoicePricing, calculateStayPeriod, normalizeBookingDate } from './invoice-pdf.js';
 import {
   validateUpiId, validateUtr, validateEmail, validatePhone,
   validateWhatsApp, validateMoney, validatePercent, markField, validatePhotoUrl} from './validate.js';
@@ -1742,13 +1742,21 @@ const DEFAULT_BOOKINGS = [
 let _bookingsCache = [];
 
 function getStoredBookings() {
+  let list = [];
   if (!_bookingsCache || _bookingsCache.length === 0) {
     try {
       const local = getLocalBookings();
-      if (local && local.length > 0) return local;
+      if (local && local.length > 0) list = local;
     } catch (_) {}
+  } else {
+    list = _bookingsCache;
   }
-  return _bookingsCache;
+  return list.map(b => {
+    if (b && b.date) {
+      b.date = normalizeBookingDate(b.date);
+    }
+    return b;
+  });
 }
 
 /** Refresh the enquiry cache from Supabase/local fallback, then repaint the table. */
@@ -3374,11 +3382,11 @@ function renderEnquiriesTable() {
         <td>
           <strong>${escapeHtml(b.room || 'Room')}</strong><br>
           <small style="color:var(--text-muted);">${escapeHtml(b.floor || '1st Floor')}</small><br>
-          <small style="color:var(--primary); font-weight:600;"><i class="fa-regular fa-calendar"></i> ${escapeHtml(b.date || '-')}</small><br>
+          <small style="color:var(--primary); font-weight:600;"><i class="fa-regular fa-calendar"></i> ${escapeHtml(normalizeBookingDate(b.date) || '-')}</small><br>
           <span style="display:inline-block; margin-top:4px; padding:2px 7px; background:rgba(201,164,92,0.15); border:1px solid rgba(201,164,92,0.3); border-radius:6px; font-size:0.75rem; color:#f8fafc; font-weight:600;">
             <i class="fa-solid fa-clock"></i> ${escapeHtml(b.duration || '1 Month')}
           </span>
-          ${b.stay_period ? `<br><small style="color:#c9a45c; font-size:0.72rem; display:block; margin-top:2px;">${escapeHtml(b.stay_period)}</small>` : ''}
+          ${b.stay_period ? `<br><small style="color:#c9a45c; font-size:0.72rem; display:block; margin-top:2px;">${escapeHtml(normalizeBookingDate(b.stay_period))}</small>` : ''}
         </td>
         <td>
           <div style="font-weight:700; color:var(--text-main); font-size:0.92rem;">Deposit: ${depositVal}</div>
@@ -5112,7 +5120,7 @@ function initBookingForm() {
     const moveInTotalNum = parseInt(moveInTotalStr.replace(/[^\d]/g, ''), 10) || bookingPricing.moveInTotal;
     const secDepositNum = parseInt(secDepositStr.replace(/[^\d]/g, ''), 10) || bookingPricing.securityDeposit;
 
-    const chosenMoveInDate = (moveInDateDisplay ? moveInDateDisplay.value : moveInDate.value) || '';
+    const chosenMoveInDate = normalizeBookingDate((moveInDateDisplay ? moveInDateDisplay.value : moveInDate.value) || '');
     const stayPeriodObj = calculateStayPeriod(chosenMoveInDate, sel.duration, sel.isDaily, sel.dailyDays);
     const stayPeriodDisplay = stayPeriodObj ? stayPeriodObj.displayText : sel.duration;
 
@@ -5403,8 +5411,8 @@ function initCustomDatePicker() {
   let viewMonth = realToday.getMonth();
   let selectedDate = null;
 
-  // Minimum selectable date is today (normalized to 00:00:00)
-  const minDate = new Date(realToday.getFullYear(), realToday.getMonth(), realToday.getDate());
+  // Minimum selectable date allows the opening month (Oct 1st, 2026 onwards)
+  const minDate = new Date(2026, 9, 1);
 
   function formatDateValue(date) {
     const y = date.getFullYear();
@@ -5544,6 +5552,13 @@ function initCustomDatePicker() {
     trigger.classList.add('active');
     popover.setAttribute('aria-hidden', 'false');
     trigger.setAttribute('aria-expanded', 'true');
+    if (selectedDate) {
+      viewYear = selectedDate.getFullYear();
+      viewMonth = selectedDate.getMonth();
+    } else {
+      viewYear = realToday.getFullYear();
+      viewMonth = realToday.getMonth();
+    }
     renderCalendar();
     placePopover();
     // Re-evaluate if the page moves or resizes while it is open.
@@ -5611,18 +5626,16 @@ function initCustomDatePicker() {
     pill.addEventListener('click', (e) => {
       e.stopPropagation();
       const type = pill.dataset.quick;
-      const target = new Date(minDate);
+      let target;
 
       if (type === 'today') {
-        // Already minDate
+        target = new Date(realToday.getFullYear(), realToday.getMonth(), realToday.getDate());
       } else if (type === 'tomorrow') {
-        target.setDate(target.getDate() + 1);
+        target = new Date(realToday.getFullYear(), realToday.getMonth(), realToday.getDate() + 1);
       } else if (type === 'opening') {
-        target.setMonth(9); // October (index 9)
-        target.setDate(1);
-        if (target < minDate) {
-          target.setFullYear(target.getFullYear() + 1);
-        }
+        target = new Date(2026, 9, 1); // 1st Oct, 2026 Opening
+      } else {
+        target = new Date(realToday.getFullYear(), realToday.getMonth(), realToday.getDate());
       }
 
       viewYear = target.getFullYear();
@@ -5655,9 +5668,10 @@ function initCustomDatePicker() {
   if (todayBtn) {
     todayBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      viewYear = minDate.getFullYear();
-      viewMonth = minDate.getMonth();
-      selectDate(minDate);
+      const todayDate = new Date(realToday.getFullYear(), realToday.getMonth(), realToday.getDate());
+      viewYear = todayDate.getFullYear();
+      viewMonth = todayDate.getMonth();
+      selectDate(todayDate);
     });
   }
 

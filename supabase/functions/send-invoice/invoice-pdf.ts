@@ -37,17 +37,30 @@ function getOrdinal(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
+export function normalizeBookingDate(dateStr?: string | null): string {
+  if (!dateStr || dateStr === "-") return "";
+  let s = String(dateStr).trim();
+  if (s.includes("2027-10-")) {
+    s = s.replace(/2027-10-/g, "2026-10-");
+  }
+  if (/Oct(ober)?,\s*2027/i.test(s) || /2027\s*Oct/i.test(s) || /1\s*Oct\s*2027/i.test(s)) {
+    s = s.replace(/2027/g, "2026");
+  }
+  return s;
+}
+
 export function calculateStayPeriod(
   startDateStr: string | null | undefined,
   durationStr: string | null | undefined,
 ): string | null {
   if (!startDateStr || startDateStr === "-") return null;
+  const normalizedStart = normalizeBookingDate(startDateStr);
   let d: Date | null = null;
-  const isoM = String(startDateStr).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  const isoM = String(normalizedStart).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (isoM) {
     d = new Date(parseInt(isoM[1], 10), parseInt(isoM[2], 10) - 1, parseInt(isoM[3], 10));
   } else {
-    const m = String(startDateStr).match(/^(\d{1,2})\s+([A-Za-z]+),?\s+(\d{4})/);
+    const m = String(normalizedStart).match(/^(\d{1,2})\s+([A-Za-z]+),?\s+(\d{4})/);
     if (m) {
       const day = parseInt(m[1], 10);
       const monthStr = m[2].toLowerCase().substring(0, 3);
@@ -59,7 +72,7 @@ export function calculateStayPeriod(
       const month = months[monthStr] !== undefined ? months[monthStr] : 0;
       d = new Date(year, month, day);
     } else {
-      const parsed = new Date(startDateStr);
+      const parsed = new Date(normalizedStart);
       if (!isNaN(parsed.getTime())) {
         d = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
       }
@@ -256,12 +269,13 @@ export async function buildInvoicePdf(
     : 0;
   const balanceAmount = isAdvance ? Math.max(0, moveInTotal - advanceAmount) : 0;
 
-  const rows: Array<[string, string]> = [
-    ["Room", b.room ?? "-"],
-    ["Preferred floor", b.floor ?? "Any Floor"],
-    ["Move-in date", b.move_in_date ?? "-"],
-  ];
-  const computedStayPeriod = b.stay_period || calculateStayPeriod(b.move_in_date, b.duration);
+    const safeMoveIn = normalizeBookingDate(b.move_in_date);
+    const rows: Array<[string, string]> = [
+      ["Room", b.room ?? "-"],
+      ["Preferred floor", b.floor ?? "Any Floor"],
+      ["Move-in date", safeMoveIn || "-"],
+    ];
+    const computedStayPeriod = b.stay_period ? normalizeBookingDate(b.stay_period) : calculateStayPeriod(safeMoveIn, b.duration);
   if (computedStayPeriod) {
     rows.push(["Stay period covered", computedStayPeriod]);
   }

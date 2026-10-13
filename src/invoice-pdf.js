@@ -77,18 +77,34 @@ function getOrdinal(n) {
 }
 
 /**
+ * Normalize and sanitize booking dates (correcting any erroneous 2027 opening dates to 2026)
+ */
+export function normalizeBookingDate(dateStr) {
+  if (!dateStr || dateStr === '-') return '';
+  let s = String(dateStr).trim();
+  if (s.includes('2027-10-')) {
+    s = s.replace(/2027-10-/g, '2026-10-');
+  }
+  if (/Oct(ober)?,\s*2027/i.test(s) || /2027\s*Oct/i.test(s) || /1\s*Oct\s*2027/i.test(s)) {
+    s = s.replace(/2027/g, '2026');
+  }
+  return s;
+}
+
+/**
  * Calculates the exact stay period starting from the move-in date.
  * If user booked on the 14th, the count starts from the 14th (Day 1 = 14th), NOT 15th.
  */
-export function calculateStayPeriod(startDateStr, durationStr, isDaily = false, durCount = 1) {
+export function calculateStayPeriod(startDateStr, durationStr, isDaily = false, durCount = null) {
   if (!startDateStr || startDateStr === '-') return null;
 
+  const normalizedStart = normalizeBookingDate(startDateStr);
   let d = null;
-  const isoM = String(startDateStr).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  const isoM = String(normalizedStart).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (isoM) {
     d = new Date(parseInt(isoM[1], 10), parseInt(isoM[2], 10) - 1, parseInt(isoM[3], 10));
   } else {
-    const m = String(startDateStr).match(/^(\d{1,2})\s+([A-Za-z]+),?\s+(\d{4})/);
+    const m = String(normalizedStart).match(/^(\d{1,2})\s+([A-Za-z]+),?\s+(\d{4})/);
     if (m) {
       const day = parseInt(m[1], 10);
       const monthStr = m[2].toLowerCase().substring(0, 3);
@@ -97,7 +113,7 @@ export function calculateStayPeriod(startDateStr, durationStr, isDaily = false, 
       const month = months[monthStr] !== undefined ? months[monthStr] : 0;
       d = new Date(year, month, day);
     } else {
-      const parsed = new Date(startDateStr);
+      const parsed = new Date(normalizedStart);
       if (!isNaN(parsed.getTime())) {
         d = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
       }
@@ -113,7 +129,7 @@ export function calculateStayPeriod(startDateStr, durationStr, isDaily = false, 
   const daily = Boolean(isDaily || durStr.toLowerCase().includes('day'));
 
   if (daily) {
-    const rawDays = parseInt(durCount || durStr.replace(/[^\d]/g, ''), 10);
+    const rawDays = parseInt(durCount, 10) || parseInt(durStr.replace(/[^\d]/g, ''), 10) || 1;
     const days = (!isNaN(rawDays) && rawDays > 0) ? rawDays : 1;
     // Count starts directly on the move-in date (14th = Day 1).
     // For 1 day: 14th only.
@@ -136,7 +152,7 @@ export function calculateStayPeriod(startDateStr, durationStr, isDaily = false, 
       displayText: `${startFmt} to ${endFmt} (${days} Days - starts ${getOrdinal(d.getDate())})`
     };
   } else {
-    const rawMonths = parseInt(durCount || durStr.replace(/[^\d]/g, ''), 10);
+    const rawMonths = parseInt(durCount, 10) || parseInt(durStr.replace(/[^\d]/g, ''), 10) || 1;
     const months = (!isNaN(rawMonths) && rawMonths > 0) ? rawMonths : 1;
     const startFmt = fmt(d);
     
@@ -271,8 +287,9 @@ export function calculateInvoicePricing(b = {}, p = {}) {
     if (!isNaN(rawP) && rawP > 0) finalMoveIn = rawP;
   }
 
+  const safeDate = normalizeBookingDate(b.date || b.move_in_date);
   const stayPeriodInfo = calculateStayPeriod(
-    b.date || b.move_in_date,
+    safeDate,
     durStr,
     isDaily,
     isDaily ? durDays : durMonths
@@ -542,7 +559,7 @@ export async function buildInvoicePdfDoc(b, h = {}) {
     { label: 'Room Sharing Accommodation', val: b.room || '2 Sharing' },
     { label: 'Climate / Ventilation Plan', val: b.climate || (calc.isAc ? 'AC' : 'Non-AC') },
     { label: 'Preferred Floor', val: b.floor || 'Any Floor' },
-    { label: 'Scheduled Move-In Date', val: b.date || b.move_in_date || '-' },
+    { label: 'Scheduled Move-In Date', val: normalizeBookingDate(b.date || b.move_in_date) || '-' },
   ];
 
   if (calc.isDaily) {
