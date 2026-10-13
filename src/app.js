@@ -224,14 +224,8 @@ function showUpiToken(ref) {
   renderQr(document.getElementById('upiQr'), uri);
   renderQr(document.getElementById('upiQrAdvance'), advanceUri);
 
-  const input = document.getElementById('upiUtrInput');
-  const btn = document.getElementById('upiUtrBtn');
-  const msg = document.getElementById('upiMsg');
   const invoiceAction = document.getElementById('cstepInvoiceAction');
-  if (invoiceAction) invoiceAction.style.display = 'none';
-  if (input) { input.value = ''; input.disabled = false; }
-  if (btn) { btn.disabled = false; btn.textContent = 'Confirm & Submit'; btn.dataset.ref = ref; }
-  if (msg) { msg.textContent = ''; msg.className = 'upi-msg'; }
+  if (invoiceAction) invoiceAction.style.display = 'block';
 
   // Set initial tab based on booking context preference
   const isCash = currentBookingContext?.payment_mode === 'cash';
@@ -351,45 +345,122 @@ function initConfirmSteps() {
   document.getElementById('cstepCashToUpi')?.addEventListener('click', () => switchConfirmPayTab('upi'));
   document.getElementById('cstepAdvanceToCash')?.addEventListener('click', () => switchConfirmPayTab('cash'));
 
+  function updateConfirmationWhatsAppLink() {
+    const waBtn2 = document.getElementById('modalWhatsAppBtn2');
+    if (waBtn2 && currentBookingContext) {
+      const isAdv = currentBookingContext.payment_mode === 'advance';
+      const isCash = currentBookingContext.payment_mode === 'cash';
+      const payDisplay = currentBookingContext.payable_move_in || '₹13,900';
+      const advStr = currentBookingContext.advance_amount
+        ? `₹${Number(currentBookingContext.advance_amount).toLocaleString('en-IN')}`
+        : '₹1,000';
+      const balStr = (currentBookingContext.balance_amount !== undefined && currentBookingContext.balance_amount !== null)
+        ? `₹${Number(currentBookingContext.balance_amount).toLocaleString('en-IN')}`
+        : '';
+
+      const payModeText = isCash
+        ? `💳 Payment Mode: Cash on Hand\n💵 Total Move-In Payable on Arrival: ${payDisplay}\n\n`
+        : isAdv
+          ? `💳 Payment Mode: Advance Token\n💰 Advance Token Paid: ${advStr} (Pending manager confirmation)\n💵 Balance Due on Move-In: ${balStr}\n\n`
+          : `💳 Payment Mode: UPI Online Transfer\n💰 Amount Paid: ${payDisplay} (Pending manager confirmation)\n\n`;
+
+      const waText = encodeURIComponent(
+        `Hello Manager, I submitted a booking enquiry on the Chaitanya Mens PG & Hostel website!\n\n` +
+        `📋 Ref Code: ${currentBookingContext.ref}\n` +
+        `👤 Name: ${currentBookingContext.name}\n` +
+        `📞 Phone: ${currentBookingContext.phone}\n` +
+        `🛏️ Room: ${currentBookingContext.room}\n` +
+        `🏢 Preferred Floor: ${currentBookingContext.floor}\n` +
+        `📅 Move-in Date: ${currentBookingContext.date}\n` +
+        (currentBookingContext.stay_period ? `🗓️ Stay Period: ${currentBookingContext.stay_period}\n` : '') +
+        `⏳ Stay Duration: ${currentBookingContext.duration}\n` +
+        payModeText +
+        `Please verify my reservation and confirm bed allocation.`
+      );
+      const mgrWa = (getHostelConfig()?.texts?.whatsapp || '919949785344').replace(/\D/g, '');
+      waBtn2.href = `https://wa.me/${mgrWa}?text=${waText}`;
+    }
+  }
+
+  function dispatchConfirmationReceiptEmail() {
+    const cfg = getHostelConfig();
+    const hostelInfo = {
+      name: cfg?.texts?.hostelName || 'Chaitanya Mens PG & Hostel',
+      phone: cfg?.texts?.phone || '+91 99497 85344',
+      email: (cfg?.texts?.email && cfg?.texts?.email !== 'jareenaworks@gmail.com') ? cfg.texts.email : 'chaitnyamenspg@gmail.com',
+      address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, NGO's Colony, Naimnagar, Hanamkonda, Telangana – 506001",
+      visitingHours: cfg?.texts?.visitingHours || '24 hrs',
+      pricing: cfg?.pricing
+    };
+    if (currentBookingContext) {
+      const guestEmail = currentBookingContext.email || (document.getElementById('upiEmailInput')?.value || '').trim();
+      if (guestEmail) {
+        sendInvoiceEmail(currentBookingContext.ref, 'receipt', {
+          email: guestEmail,
+          booking: currentBookingContext,
+          hostel: hostelInfo
+        }).then(mailRes => {
+          if (mailRes?.ok) {
+            showSiteToast('Invoice Dispatched', 'PDF invoice sent to your email.', 'fa-solid fa-envelope-circle-check');
+          }
+        });
+      }
+    }
+  }
+
   document.getElementById('cstepAdvanceToUtr')?.addEventListener('click', async () => {
     if (currentBookingContext) {
       currentBookingContext.payment_mode = 'advance';
       currentBookingContext.paymentMode = 'Advance Token';
     }
+    const rref = currentBookingContext?.ref;
+    if (rref) {
+      updateLocalBooking(rref, { payment_mode: 'advance', paymentMode: 'Advance Token' });
+    }
+
+    const ask = document.getElementById('upiEmailAsk');
+    if (ask && !ask.hidden) {
+      const field = document.getElementById('upiEmailInput');
+      const note = document.getElementById('upiEmailMsg');
+      const value = (field?.value || '').trim();
+      note.className = 'upi-msg';
+      if (!value) {
+        note.textContent = 'Add an email so we can send your invoice.';
+        note.classList.add('is-err');
+        field?.focus();
+        return;
+      }
+      const res = await setBookingEmail(ask.dataset.ref, value);
+      if (!res.ok) {
+        note.textContent = res.error;
+        note.classList.add(/does not look right/.test(res.error) ? 'is-err' : 'is-warn');
+        if (/does not look right/.test(res.error)) { field?.focus(); return; }
+      }
+      ask.hidden = true;
+    }
+
+    const advAmt = document.getElementById('advanceTokenAmtDisp')?.textContent || '₹1,000';
     const step3Title = document.getElementById('step3HeadTitle');
     const step3Sub = document.getElementById('step3HeadSub');
     const upiArea = document.getElementById('step3UpiArea');
     const cashArea = document.getElementById('step3CashArea');
+    const upiTitle = document.getElementById('step3UpiTitle');
+    const upiDesc = document.getElementById('step3UpiDesc');
+    const invoiceAction = document.getElementById('cstepInvoiceAction');
 
-    const advAmt = document.getElementById('advanceTokenAmtDisp')?.textContent || '₹1,000';
-    if (step3Title) step3Title.textContent = 'Confirm Advance Payment';
-    if (step3Sub) step3Sub.textContent = `Enter the UPI reference for your ${advAmt} advance transfer (Optional) or continue.`;
+    if (step3Title) step3Title.textContent = 'Advance Token Registered';
+    if (step3Sub) step3Sub.textContent = `Your ${advAmt} advance token reservation has been submitted.`;
     if (upiArea) upiArea.style.display = 'block';
     if (cashArea) cashArea.style.display = 'none';
+    if (upiTitle) upiTitle.textContent = `Advance Token (${advAmt}) Registered`;
+    if (upiDesc) upiDesc.textContent = 'Your advance token transfer is recorded. Remaining balance is payable upon arrival.';
+    if (invoiceAction) invoiceAction.style.display = 'block';
 
-    const ask = document.getElementById('upiEmailAsk');
-    if (!ask || ask.hidden) { gotoConfirmStep(3); return; }
-
-    const field = document.getElementById('upiEmailInput');
-    const note = document.getElementById('upiEmailMsg');
-    const value = (field?.value || '').trim();
-    note.className = 'upi-msg';
-
-    if (!value) {
-      note.textContent = 'Add an email so we can send your invoice.';
-      note.classList.add('is-err');
-      field?.focus();
-      return;
-    }
-
-    const res = await setBookingEmail(ask.dataset.ref, value);
-    if (!res.ok) {
-      note.textContent = res.error;
-      note.classList.add(/does not look right/.test(res.error) ? 'is-err' : 'is-warn');
-      if (/does not look right/.test(res.error)) { field?.focus(); return; }
-    }
-    ask.hidden = true;
+    tokenStepSettled = true;
     gotoConfirmStep(3);
+    updateConfirmationWhatsAppLink();
+    dispatchConfirmationReceiptEmail();
+    showSiteToast('Advance Token Recorded', 'Booking confirmed. Download your invoice receipt below.', 'fa-solid fa-hand-holding-dollar');
   });
 
   document.getElementById('cstepConfirmCash')?.addEventListener('click', () => {
@@ -417,6 +488,7 @@ function initConfirmSteps() {
 
     tokenStepSettled = true;
     gotoConfirmStep(3);
+    updateConfirmationWhatsAppLink();
 
     showSiteToast('Cash on Hand Selected', 'Booking recorded. You can download your invoice receipt below.', 'fa-solid fa-money-bill-wave');
 
@@ -431,53 +503,79 @@ function initConfirmSteps() {
   });
 
   document.getElementById('cstepToUtr')?.addEventListener('click', async () => {
+    if (currentBookingContext) {
+      currentBookingContext.payment_mode = 'upi';
+      currentBookingContext.paymentMode = 'UPI Instant Transfer';
+    }
+    const rref = currentBookingContext?.ref;
+    if (rref) {
+      updateLocalBooking(rref, { payment_mode: 'upi', paymentMode: 'UPI Instant Transfer' });
+    }
+
+    const ask = document.getElementById('upiEmailAsk');
+    if (ask && !ask.hidden) {
+      const field = document.getElementById('upiEmailInput');
+      const note = document.getElementById('upiEmailMsg');
+      const value = (field?.value || '').trim();
+      note.className = 'upi-msg';
+      if (!value) {
+        note.textContent = 'Add an email so we can send your invoice.';
+        note.classList.add('is-err');
+        field?.focus();
+        return;
+      }
+      const res = await setBookingEmail(ask.dataset.ref, value);
+      if (!res.ok) {
+        note.textContent = res.error;
+        note.classList.add(/does not look right/.test(res.error) ? 'is-err' : 'is-warn');
+        if (/does not look right/.test(res.error)) { field?.focus(); return; }
+      }
+      ask.hidden = true;
+    }
+
     const step3Title = document.getElementById('step3HeadTitle');
     const step3Sub = document.getElementById('step3HeadSub');
     const upiArea = document.getElementById('step3UpiArea');
     const cashArea = document.getElementById('step3CashArea');
+    const upiTitle = document.getElementById('step3UpiTitle');
+    const upiDesc = document.getElementById('step3UpiDesc');
+    const invoiceAction = document.getElementById('cstepInvoiceAction');
 
-    if (step3Title) step3Title.textContent = 'Confirm your payment';
-    if (step3Sub) step3Sub.textContent = 'Enter the UPI reference from your payment app (Optional) or continue.';
+    if (step3Title) step3Title.textContent = 'Booking Confirmed & Registered';
+    if (step3Sub) step3Sub.textContent = 'Your reservation request has been submitted to hostel management.';
     if (upiArea) upiArea.style.display = 'block';
     if (cashArea) cashArea.style.display = 'none';
+    if (upiTitle) upiTitle.textContent = 'Online Payment Registered';
+    if (upiDesc) upiDesc.textContent = 'Your UPI transfer has been recorded. The hostel manager will verify and confirm your bed.';
+    if (invoiceAction) invoiceAction.style.display = 'block';
 
-    const ask = document.getElementById('upiEmailAsk');
-    // Nothing asked for -> straight through.
-    if (!ask || ask.hidden) { gotoConfirmStep(3); return; }
-
-    const field = document.getElementById('upiEmailInput');
-    const note = document.getElementById('upiEmailMsg');
-    const value = (field?.value || '').trim();
-    note.className = 'upi-msg';
-
-    if (!value) {
-      note.textContent = 'Add an email so we can send your invoice.';
-      note.classList.add('is-err');
-      field?.focus();
-      return;
-    }
-
-    const res = await setBookingEmail(ask.dataset.ref, value);
-    if (!res.ok) {
-      note.textContent = res.error;
-      // A transport failure is not the guest's fault and must not trap
-      // them on this step — they have already paid.
-      note.classList.add(/does not look right/.test(res.error) ? 'is-err' : 'is-warn');
-      if (/does not look right/.test(res.error)) { field?.focus(); return; }
-    }
-    ask.hidden = true;
+    tokenStepSettled = true;
     gotoConfirmStep(3);
+    updateConfirmationWhatsAppLink();
+    dispatchConfirmationReceiptEmail();
+    showSiteToast('Payment Recorded', 'Booking confirmed. Download your invoice receipt below.', 'fa-solid fa-circle-check');
   });
+
   document.getElementById('cstepSkipPay')?.addEventListener('click', () => {
     const step3Title = document.getElementById('step3HeadTitle');
     const step3Sub = document.getElementById('step3HeadSub');
     const upiArea = document.getElementById('step3UpiArea');
     const cashArea = document.getElementById('step3CashArea');
-    if (step3Title) step3Title.textContent = 'Confirm your payment';
-    if (step3Sub) step3Sub.textContent = 'Enter the 12-digit UPI reference or settle with manager.';
+    const upiTitle = document.getElementById('step3UpiTitle');
+    const upiDesc = document.getElementById('step3UpiDesc');
+    const invoiceAction = document.getElementById('cstepInvoiceAction');
+
+    if (step3Title) step3Title.textContent = 'Reservation Enquiry Registered';
+    if (step3Sub) step3Sub.textContent = 'Your booking enquiry is recorded. Message the manager on WhatsApp to finalize.';
     if (upiArea) upiArea.style.display = 'block';
     if (cashArea) cashArea.style.display = 'none';
+    if (upiTitle) upiTitle.textContent = 'Reservation Enquiry Logged';
+    if (upiDesc) upiDesc.textContent = 'Please contact the hostel manager on WhatsApp to confirm payment and bed allocation.';
+    if (invoiceAction) invoiceAction.style.display = 'block';
+
+    tokenStepSettled = true;
     gotoConfirmStep(3);
+    updateConfirmationWhatsAppLink();
   });
 
   // Let a visitor step back by clicking a completed dot.
@@ -506,17 +604,12 @@ function initConfirmSteps() {
     } catch { /* clipboard blocked */ }
   });
 
-  const btn = document.getElementById('upiUtrBtn');
-  const input = document.getElementById('upiUtrInput');
-  const msg = document.getElementById('upiMsg');
-  const invoiceAction = document.getElementById('cstepInvoiceAction');
   const downloadBtn = document.getElementById('downloadInvoiceBtn');
-
   const step1DownloadBtn = document.getElementById('step1DownloadInvoiceBtn');
 
   async function handleInvoiceDownload(btnTarget) {
     if (!btnTarget) return;
-    const liveUtr = (document.getElementById('upiUtrInput')?.value || '').trim();
+    const liveUtr = (currentBookingContext?.upi_utr || '').trim();
     const guestEmailVal = (document.getElementById('upiEmailInput')?.value || document.getElementById('email')?.value || '').trim();
     const gName = (document.getElementById('fullName')?.value || document.getElementById('modalName')?.textContent || 'Resident').trim();
     const gPhone = (document.getElementById('phone')?.value || document.getElementById('modalPhone')?.textContent || '').trim();
@@ -603,123 +696,6 @@ function initConfirmSteps() {
   downloadBtn?.addEventListener('click', () => handleInvoiceDownload(downloadBtn));
   step1DownloadBtn?.addEventListener('click', () => handleInvoiceDownload(step1DownloadBtn));
 
-  // Live input sync without restrictive character stripping
-  input?.addEventListener('input', () => {
-    const val = (input.value || '').trim();
-    if (msg && msg.textContent) { msg.textContent = ''; msg.className = 'upi-msg'; }
-    if (currentBookingContext) {
-      currentBookingContext.upi_utr = val;
-    }
-  });
-
-  btn?.addEventListener('click', async () => {
-    const rawVal = (input?.value || '').trim();
-    msg.className = 'upi-msg';
-    btn.disabled = true;
-
-    if (rawVal) {
-      await submitUtr(btn.dataset.ref, rawVal);
-      updateLocalBooking(btn.dataset.ref, { utr: rawVal, upi_utr: rawVal });
-      if (currentBookingContext) {
-        currentBookingContext.upi_utr = rawVal;
-      }
-    }
-
-    const isAdvance = currentBookingContext?.payment_mode === 'advance';
-    const advMoney = currentBookingContext?.advance_amount
-      ? `₹${Number(currentBookingContext.advance_amount).toLocaleString('en-IN')}`
-      : (document.getElementById('advanceTokenAmtDisp')?.textContent || '₹1,000');
-    const balMoney = (currentBookingContext?.balance_amount !== undefined && currentBookingContext?.balance_amount !== null)
-      ? `₹${Number(currentBookingContext.balance_amount).toLocaleString('en-IN')}`
-      : (document.getElementById('advanceBalanceAmtDisp')?.textContent || '');
-
-    if (rawVal) {
-      if (isAdvance) {
-        msg.innerHTML = `<span style="display:block;margin-bottom:4px;font-weight:600;">✓ Advance UPI Reference recorded: <strong>${escapeHtml(rawVal)}</strong></span><span style="display:block;color:#f59e0b;font-size:0.83rem;">⚠️ <strong>Advance Token (${advMoney}):</strong> Pending manager verification. Remaining balance ${balMoney ? `<strong>${balMoney}</strong> ` : ''}payable upon arrival.</span>`;
-      } else {
-        msg.innerHTML = `<span style="display:block;margin-bottom:4px;font-weight:600;">✓ UPI Reference recorded: <strong>${escapeHtml(rawVal)}</strong></span><span style="display:block;color:#f59e0b;font-size:0.83rem;">⚠️ <strong>Important:</strong> Until verification from the hostel manager, this is <u>NOT considered as paid</u>.</span>`;
-      }
-    } else {
-      if (isAdvance) {
-        msg.innerHTML = `<span style="display:block;margin-bottom:4px;font-weight:600;">✓ Reservation Registered (Advance Token: ${advMoney})</span><span style="display:block;color:#f59e0b;font-size:0.83rem;">⚠️ <strong>Advance Token:</strong> Pending manager verification. Remaining balance ${balMoney ? `<strong>${balMoney}</strong> ` : ''}payable upon arrival.</span>`;
-      } else {
-        msg.innerHTML = `<span style="display:block;margin-bottom:4px;font-weight:600;">✓ Booking Enquiry Registered</span><span style="display:block;color:#f59e0b;font-size:0.83rem;">⚠️ <strong>Important:</strong> Until verification from the hostel manager, this is <u>NOT considered as paid</u>.</span>`;
-      }
-    }
-    msg.classList.add('is-ok');
-
-    input.disabled = true;
-    btn.disabled = true;
-    btn.textContent = 'Submitted ✓';
-    tokenStepSettled = true;
-
-    // Reveal the download invoice button
-    if (invoiceAction) {
-      invoiceAction.style.display = 'block';
-    }
-
-    // Dispatch invoice email if email is provided or in local dev
-    const cfg = getHostelConfig();
-    const hostelInfo = {
-      name: cfg?.texts?.hostelName || 'Chaitanya Mens PG & Hostel',
-      phone: cfg?.texts?.phone || '+91 99497 85344',
-      email: (cfg?.texts?.email && cfg?.texts?.email !== 'jareenaworks@gmail.com') ? cfg.texts.email : 'chaitnyamenspg@gmail.com',
-      address: cfg?.texts?.address || "18-5-38/1, Beside Siva Kumar Clinic, Venkateshwara Colony, NGO's Colony, Naimnagar, Hanamkonda, Telangana – 506001",
-      visitingHours: cfg?.texts?.visitingHours || '24 hrs',
-      pricing: cfg?.pricing
-    };
-    if (currentBookingContext) {
-      const guestEmail = currentBookingContext.email || (document.getElementById('upiEmailInput')?.value || '').trim();
-      sendInvoiceEmail(currentBookingContext.ref, 'receipt', {
-        email: guestEmail,
-        booking: currentBookingContext,
-        hostel: hostelInfo
-      }).then(mailRes => {
-        if (mailRes?.ok) {
-          showSiteToast('Invoice Dispatched', 'PDF invoice sent to your email. (Note: Not considered paid until verified by manager).', 'fa-solid fa-envelope-circle-check');
-        }
-      });
-    }
-
-    // Update WhatsApp link with UTR
-    const waBtn2 = document.getElementById('modalWhatsAppBtn2');
-    if (waBtn2 && currentBookingContext) {
-      const isAdv = currentBookingContext.payment_mode === 'advance';
-      const payDisplay = currentBookingContext.payable_move_in || '13,900';
-      const advStr = currentBookingContext.advance_amount
-        ? `₹${Number(currentBookingContext.advance_amount).toLocaleString('en-IN')}`
-        : '₹1,000';
-      const balStr = (currentBookingContext.balance_amount !== undefined && currentBookingContext.balance_amount !== null)
-        ? `₹${Number(currentBookingContext.balance_amount).toLocaleString('en-IN')}`
-        : '';
-
-      const utrWaText = rawVal
-        ? `🔢 UPI Ref (UTR): ${rawVal}\n\n`
-        : `🔢 Payment: Submitted via UPI QR (pending verification)\n\n`;
-
-      const waText = encodeURIComponent(
-        `Hello Manager, I submitted a booking enquiry on the Chaitanya Mens PG & Hostel website!\n\n` +
-        `📋 Ref Code: ${currentBookingContext.ref}\n` +
-        `👤 Name: ${currentBookingContext.name}\n` +
-        `📞 Phone: ${currentBookingContext.phone}\n` +
-        `🛏️ Room: ${currentBookingContext.room}\n` +
-        `🏢 Preferred Floor: ${currentBookingContext.floor}\n` +
-        `📅 Move-in Date: ${currentBookingContext.date}\n` +
-        (currentBookingContext.stay_period ? `🗓️ Stay Period: ${currentBookingContext.stay_period}\n` : '') +
-        `⏳ Stay Duration: ${currentBookingContext.duration}\n` +
-        (isAdv
-          ? `💳 Payment Mode: Advance Token\n` +
-            `💰 Advance Paid: ${advStr} (Pending manager verification)\n` +
-            `💵 Balance Due on Move-In: ${balStr}\n` +
-            utrWaText
-          : `💳 Amount Submitted: ${payDisplay} (Pending manager verification — not considered paid until verified)\n` +
-            utrWaText) +
-        `Please verify the payment against bank records and confirm bed allocation.`
-      );
-      const mgrWa = (getHostelConfig()?.texts?.whatsapp || '919949785344').replace(/\D/g, '');
-      waBtn2.href = `https://wa.me/${mgrWa}?text=${waText}`;
-    }
-  });
 }
 
 /* ===================================================================

@@ -1,11 +1,11 @@
 {
   "name": "chaitanya-hostel-site",
   "version": "1.0.0",
-  "description": "Chaitanya Mens PG & Hostel — public site with a Supabase-backed manager portal",
+  "description": "Chaitanya Mens PG & Hostel \u2014 public site with a Supabase-backed manager portal",
   "main": "src/app.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "node api.js && vite",
+    "build": "node api.js && vite build",
     "preview": "vite preview",
     "test:email": "node test-invoice-email.mjs"
   },

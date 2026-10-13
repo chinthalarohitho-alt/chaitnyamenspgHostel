@@ -1555,7 +1555,7 @@
 
             <div class="cstep-actions">
               <button type="button" class="cstep-next" id="cstepToUtr">
-                I've paid <i class="fa-solid fa-arrow-right"></i>
+                I've paid — Confirm Booking <i class="fa-solid fa-arrow-right"></i>
               </button>
               <button type="button" class="cstep-skip" id="cstepSkipPay">Skip — settle on WhatsApp</button>
             </div>
@@ -1594,7 +1594,7 @@
 
               <div class="cstep-actions" style="margin-top: 18px;">
                 <button type="button" class="cstep-next" id="cstepAdvanceToUtr">
-                  I've paid Advance Token <i class="fa-solid fa-arrow-right"></i>
+                  I've paid Advance — Confirm Booking <i class="fa-solid fa-arrow-right"></i>
                 </button>
                 <button type="button" class="cstep-skip" id="cstepAdvanceToCash">Switch to Cash on Hand</button>
               </div>
@@ -1642,21 +1642,24 @@
       <!-- ── STEP 3 ───────────────────────────────── -->
       <section class="cstep" data-step="3">
         <div class="confirm-head">
-          <h3 id="step3HeadTitle">Confirm your payment</h3>
-          <p class="confirm-sub" id="step3HeadSub">Enter the UPI reference from your payment app (Optional) or continue.</p>
+          <h3 id="step3HeadTitle">Booking Confirmed &amp; Registered</h3>
+          <p class="confirm-sub" id="step3HeadSub">Your reservation request has been submitted to hostel management.</p>
         </div>
 
         <div class="confirm-body">
-          <div class="upi-utr" id="step3UpiArea">
-            <div class="upi-utr-row">
-              <input type="text" id="upiUtrInput" aria-label="UPI reference (Optional)"
-                     placeholder="e.g. 123456789012 (Optional)" autocomplete="off">
-              <button type="button" class="upi-submit" id="upiUtrBtn">Confirm &amp; Submit</button>
+          <!-- UPI / Advance Confirmed Area in Step 3 -->
+          <div class="cash-confirmed-box" id="step3UpiArea">
+            <div class="cash-confirmed-icon" style="background: rgba(34, 197, 94, 0.12); color: #22c55e;">
+              <i class="fa-solid fa-circle-check"></i>
             </div>
-            <span class="upi-msg" id="upiMsg"></span>
-            <p class="upi-note">
-              Optional: Enter the bank reference from your payment app, or click Confirm &amp; Submit to complete your booking.
+            <h4 class="cash-confirmed-title" id="step3UpiTitle" style="color: #22c55e;">Online Booking Registered</h4>
+            <p class="cash-confirmed-desc" id="step3UpiDesc">
+              Your reservation has been recorded. The hostel manager will verify your transfer and confirm your bed allocation.
             </p>
+            <div class="cash-confirmed-status">
+              <i class="fa-solid fa-clock"></i>
+              <span>Status: Pending hostel manager verification</span>
+            </div>
           </div>
 
           <!-- Cash Confirmed Area in Step 3 -->
