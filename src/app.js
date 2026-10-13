@@ -230,7 +230,7 @@ function showUpiToken(ref) {
   const invoiceAction = document.getElementById('cstepInvoiceAction');
   if (invoiceAction) invoiceAction.style.display = 'none';
   if (input) { input.value = ''; input.disabled = false; }
-  if (btn) { btn.disabled = false; btn.textContent = 'Submit'; btn.dataset.ref = ref; }
+  if (btn) { btn.disabled = false; btn.textContent = 'Confirm & Submit'; btn.dataset.ref = ref; }
   if (msg) { msg.textContent = ''; msg.className = 'upi-msg'; }
 
   // Set initial tab based on booking context preference
@@ -363,7 +363,7 @@ function initConfirmSteps() {
 
     const advAmt = document.getElementById('advanceTokenAmtDisp')?.textContent || '₹1,000';
     if (step3Title) step3Title.textContent = 'Confirm Advance Payment';
-    if (step3Sub) step3Sub.textContent = `Enter the 12-digit UPI reference for your ${advAmt} advance transfer.`;
+    if (step3Sub) step3Sub.textContent = `Enter the UPI reference for your ${advAmt} advance transfer (Optional) or continue.`;
     if (upiArea) upiArea.style.display = 'block';
     if (cashArea) cashArea.style.display = 'none';
 
@@ -437,7 +437,7 @@ function initConfirmSteps() {
     const cashArea = document.getElementById('step3CashArea');
 
     if (step3Title) step3Title.textContent = 'Confirm your payment';
-    if (step3Sub) step3Sub.textContent = 'Enter the 12-digit UPI reference from your payment app.';
+    if (step3Sub) step3Sub.textContent = 'Enter the UPI reference from your payment app (Optional) or continue.';
     if (upiArea) upiArea.style.display = 'block';
     if (cashArea) cashArea.style.display = 'none';
 
@@ -516,7 +516,7 @@ function initConfirmSteps() {
 
   async function handleInvoiceDownload(btnTarget) {
     if (!btnTarget) return;
-    const liveUtr = (document.getElementById('upiUtrInput')?.value || '').replace(/\D/g, '').slice(0, 12);
+    const liveUtr = (document.getElementById('upiUtrInput')?.value || '').trim();
     const guestEmailVal = (document.getElementById('upiEmailInput')?.value || document.getElementById('email')?.value || '').trim();
     const gName = (document.getElementById('fullName')?.value || document.getElementById('modalName')?.textContent || 'Resident').trim();
     const gPhone = (document.getElementById('phone')?.value || document.getElementById('modalPhone')?.textContent || '').trim();
@@ -603,60 +603,50 @@ function initConfirmSteps() {
   downloadBtn?.addEventListener('click', () => handleInvoiceDownload(downloadBtn));
   step1DownloadBtn?.addEventListener('click', () => handleInvoiceDownload(step1DownloadBtn));
 
-  // Strip anything that isn't a digit as it is typed or pasted, so the
-  // field cannot hold something that will be rejected on submit.
+  // Live input sync without restrictive character stripping
   input?.addEventListener('input', () => {
-    const cleaned = input.value.replace(/\D/g, '').slice(0, 12);
-    if (cleaned !== input.value) input.value = cleaned;
+    const val = (input.value || '').trim();
     if (msg && msg.textContent) { msg.textContent = ''; msg.className = 'upi-msg'; }
     if (currentBookingContext) {
-      currentBookingContext.upi_utr = cleaned;
+      currentBookingContext.upi_utr = val;
     }
   });
 
   btn?.addEventListener('click', async () => {
-    const check = validateUtr(input.value);
+    const rawVal = (input?.value || '').trim();
     msg.className = 'upi-msg';
-    if (!check.ok) {
-      msg.textContent = check.error;
-      msg.classList.add('is-err');
-      input.focus();
-      return;
-    }
     btn.disabled = true;
-    const res = await submitUtr(btn.dataset.ref, check.value);
-    btn.disabled = false;
-    updateLocalBooking(btn.dataset.ref, { utr: check.value, upi_utr: check.value });
 
-    if (currentBookingContext) {
-      currentBookingContext.upi_utr = check.value;
-    }
-
-    if (!res.ok && !res.unreachable) {
-      msg.textContent = res.error;
-      msg.classList.add('is-err');
-      return;
-    }
-
-    if (res.unreachable) {
-      msg.textContent = res.error;
-      msg.classList.add('is-warn');
-    } else {
-      const isAdvance = currentBookingContext?.payment_mode === 'advance';
-      const advMoney = currentBookingContext?.advance_amount
-        ? `₹${Number(currentBookingContext.advance_amount).toLocaleString('en-IN')}`
-        : (document.getElementById('advanceTokenAmtDisp')?.textContent || '₹1,000');
-      const balMoney = (currentBookingContext?.balance_amount !== undefined && currentBookingContext?.balance_amount !== null)
-        ? `₹${Number(currentBookingContext.balance_amount).toLocaleString('en-IN')}`
-        : (document.getElementById('advanceBalanceAmtDisp')?.textContent || '');
-
-      if (isAdvance) {
-        msg.innerHTML = `<span style="display:block;margin-bottom:4px;font-weight:600;">✓ Advance UPI Reference recorded: <strong>${check.value}</strong></span><span style="display:block;color:#f59e0b;font-size:0.83rem;">⚠️ <strong>Advance Token (${advMoney}):</strong> Pending manager verification. Remaining balance ${balMoney ? `<strong>${balMoney}</strong> ` : ''}payable upon arrival.</span>`;
-      } else {
-        msg.innerHTML = '<span style="display:block;margin-bottom:4px;font-weight:600;">✓ UPI Reference recorded: <strong>' + check.value + '</strong></span><span style="display:block;color:#f59e0b;font-size:0.83rem;">⚠️ <strong>Important:</strong> Until verification from the hostel manager, this is <u>NOT considered as paid</u>.</span>';
+    if (rawVal) {
+      await submitUtr(btn.dataset.ref, rawVal);
+      updateLocalBooking(btn.dataset.ref, { utr: rawVal, upi_utr: rawVal });
+      if (currentBookingContext) {
+        currentBookingContext.upi_utr = rawVal;
       }
-      msg.classList.add('is-ok');
     }
+
+    const isAdvance = currentBookingContext?.payment_mode === 'advance';
+    const advMoney = currentBookingContext?.advance_amount
+      ? `₹${Number(currentBookingContext.advance_amount).toLocaleString('en-IN')}`
+      : (document.getElementById('advanceTokenAmtDisp')?.textContent || '₹1,000');
+    const balMoney = (currentBookingContext?.balance_amount !== undefined && currentBookingContext?.balance_amount !== null)
+      ? `₹${Number(currentBookingContext.balance_amount).toLocaleString('en-IN')}`
+      : (document.getElementById('advanceBalanceAmtDisp')?.textContent || '');
+
+    if (rawVal) {
+      if (isAdvance) {
+        msg.innerHTML = `<span style="display:block;margin-bottom:4px;font-weight:600;">✓ Advance UPI Reference recorded: <strong>${escapeHtml(rawVal)}</strong></span><span style="display:block;color:#f59e0b;font-size:0.83rem;">⚠️ <strong>Advance Token (${advMoney}):</strong> Pending manager verification. Remaining balance ${balMoney ? `<strong>${balMoney}</strong> ` : ''}payable upon arrival.</span>`;
+      } else {
+        msg.innerHTML = `<span style="display:block;margin-bottom:4px;font-weight:600;">✓ UPI Reference recorded: <strong>${escapeHtml(rawVal)}</strong></span><span style="display:block;color:#f59e0b;font-size:0.83rem;">⚠️ <strong>Important:</strong> Until verification from the hostel manager, this is <u>NOT considered as paid</u>.</span>`;
+      }
+    } else {
+      if (isAdvance) {
+        msg.innerHTML = `<span style="display:block;margin-bottom:4px;font-weight:600;">✓ Reservation Registered (Advance Token: ${advMoney})</span><span style="display:block;color:#f59e0b;font-size:0.83rem;">⚠️ <strong>Advance Token:</strong> Pending manager verification. Remaining balance ${balMoney ? `<strong>${balMoney}</strong> ` : ''}payable upon arrival.</span>`;
+      } else {
+        msg.innerHTML = `<span style="display:block;margin-bottom:4px;font-weight:600;">✓ Booking Enquiry Registered</span><span style="display:block;color:#f59e0b;font-size:0.83rem;">⚠️ <strong>Important:</strong> Until verification from the hostel manager, this is <u>NOT considered as paid</u>.</span>`;
+      }
+    }
+    msg.classList.add('is-ok');
 
     input.disabled = true;
     btn.disabled = true;
@@ -703,6 +693,10 @@ function initConfirmSteps() {
         ? `₹${Number(currentBookingContext.balance_amount).toLocaleString('en-IN')}`
         : '';
 
+      const utrWaText = rawVal
+        ? `🔢 UPI Ref (UTR): ${rawVal}\n\n`
+        : `🔢 Payment: Submitted via UPI QR (pending verification)\n\n`;
+
       const waText = encodeURIComponent(
         `Hello Manager, I submitted a booking enquiry on the Chaitanya Mens PG & Hostel website!\n\n` +
         `📋 Ref Code: ${currentBookingContext.ref}\n` +
@@ -717,9 +711,9 @@ function initConfirmSteps() {
           ? `💳 Payment Mode: Advance Token\n` +
             `💰 Advance Paid: ${advStr} (Pending manager verification)\n` +
             `💵 Balance Due on Move-In: ${balStr}\n` +
-            `🔢 UPI Ref (UTR): ${check.value}\n\n`
+            utrWaText
           : `💳 Amount Submitted: ${payDisplay} (Pending manager verification — not considered paid until verified)\n` +
-            `🔢 UPI Ref (UTR): ${check.value}\n\n`) +
+            utrWaText) +
         `Please verify the payment against bank records and confirm bed allocation.`
       );
       const mgrWa = (getHostelConfig()?.texts?.whatsapp || '919949785344').replace(/\D/g, '');

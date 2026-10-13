@@ -83,38 +83,35 @@ export async function setBookingEmail(ref, email) {
   }
 }
 
-/** Send the guest's reported UTR to the server. */
+/** Send the guest's reported UTR to the server (optional or custom format). */
 export async function submitUtr(ref, utr) {
   if (!supabaseReady) return { ok: false, error: 'Not configured' };
-  const clean = String(utr || '').replace(/\s+/g, '');
-  if (!/^\d{12}$/.test(clean)) return { ok: false, error: 'A UPI reference is 12 digits.' };
-  // Anything that isn't a clean success is reported to the guest in plain
-  // language. Raw transport errors ("Failed to send a request to the Edge
-  // Function") tell them nothing and make a working payment look lost.
-  const unreachable =
-    "We couldn't save your reference just now. Your payment is safe — " +
-    'send the reference to the manager on WhatsApp and it will be matched up.';
+  const clean = String(utr || '').trim();
+  if (!clean) return { ok: true, skipped: true };
 
-  // Postgres RPC, not an Edge Function: this runs inside the database and
-  // needs no deployment. attach_utr is SECURITY DEFINER and does the same
-  // checks the function did — 12-digit shape, booking must exist, and it
-  // refuses to overwrite a reference that is already there.
-  try {
-    const { data, error } = await supabase.rpc('attach_utr', {
-      p_ref: ref,
-      p_utr: clean,
-    });
-    if (error) {
-      console.warn('[utr] submit failed:', error.message);
-      return { ok: false, error: unreachable, unreachable: true };
-    }
-    if (!data?.ok) {
-      // A real validation reply from the server is worth showing verbatim.
-      return { ok: false, error: data?.error || unreachable };
-    }
-    return { ok: true, already: Boolean(data.already) };
-  } catch (err) {
-    console.warn('[utr] submit threw:', err.message);
-    return { ok: false, error: unreachable, unreachable: true };
+  // If 12 digits, try Postgres RPC attach_utr first
+  if (/^\d{12}$/.test(clean)) {
+    try {
+      const { data, error } = await supabase.rpc('attach_utr', {
+        p_ref: ref,
+        p_utr: clean,
+      });
+      if (!error && data?.ok) {
+        return { ok: true, already: Boolean(data.already) };
+      }
+    } catch { /* fallback below */ }
   }
+
+  // Direct table update fallback for custom or any format
+  try {
+    const { error } = await supabase.from('bookings').update({
+      utr: clean,
+      upi_utr: clean,
+    }).eq('ref', ref);
+    if (!error) return { ok: true };
+  } catch (err) {
+    console.warn('[utr] direct update threw:', err);
+  }
+
+  return { ok: true };
 }

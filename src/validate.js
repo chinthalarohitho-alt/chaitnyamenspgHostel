@@ -52,14 +52,9 @@ export function validateUpiId(raw) {
   return { ok: true };
 }
 
-/** Bank UTR / RRN as shown in a UPI app: exactly 12 digits. */
+/** Bank UTR / RRN as shown in a UPI app: optional or custom reference. */
 export function validateUtr(raw) {
-  const v = String(raw || '').replace(/\s+/g, '');
-  if (!v) return { ok: false, error: 'Enter the reference from your payment app.' };
-  if (!/^\d+$/.test(v)) return { ok: false, error: 'The reference is digits only.' };
-  if (v.length !== 12) {
-    return { ok: false, error: `That is ${v.length} digits — a UPI reference is 12.` };
-  }
+  const v = String(raw || '').trim();
   return { ok: true, value: v };
 }
 
