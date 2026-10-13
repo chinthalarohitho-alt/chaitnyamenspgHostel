@@ -2795,7 +2795,7 @@ function renderEnquiriesTable() {
         } else {
           activeInlineAction = { ref, type: 'accept' };
           const b = getStoredBookings().find(x => x.ref === ref);
-          const repUtr = (b?.utr || b?.upi_utr || '').replace(/\D/g, '').slice(0, 12);
+          const repUtr = (b?.utr || b?.upi_utr || '').trim();
           if (activeUtrValues[ref] === undefined && repUtr) {
             activeUtrValues[ref] = repUtr;
           }
@@ -2838,7 +2838,7 @@ function renderEnquiriesTable() {
       const quickBtn = e.target.closest('[data-inline-quick-utr]');
       if (quickBtn) {
         const ref = quickBtn.dataset.ref;
-        const quickVal = (quickBtn.dataset.inlineQuickUtr || '').replace(/\D/g, '').slice(0, 12);
+        const quickVal = (quickBtn.dataset.inlineQuickUtr || '').trim();
         if (ref && quickVal) {
           activeUtrValues[ref] = quickVal;
           const inp = document.getElementById(`inlineUtr-${ref}`);
@@ -2847,11 +2847,11 @@ function renderEnquiriesTable() {
           const errEl = document.getElementById(`inlineError-${ref}`);
           if (inp) inp.value = quickVal;
           if (counter) {
-            counter.textContent = `${quickVal.length} / 12`;
-            counter.classList.toggle('is-valid', quickVal.length === 12);
+            counter.textContent = quickVal.length ? `${quickVal.length} chars` : 'Optional';
+            counter.classList.toggle('is-valid', quickVal.length > 0);
           }
           if (confirmBtn) {
-            confirmBtn.disabled = quickVal.length !== 12;
+            confirmBtn.disabled = false;
           }
           if (errEl) errEl.textContent = '';
           if (inp) inp.focus();
@@ -2873,13 +2873,9 @@ function renderEnquiriesTable() {
 
         const inp = document.getElementById(`inlineUtr-${ref}`);
         const errEl = document.getElementById(`inlineError-${ref}`);
-        const utr = (inp?.value || activeUtrValues[ref] || '').replace(/\D/g, '').slice(0, 12);
+        const utr = (inp?.value !== undefined ? inp.value : (activeUtrValues[ref] || b.utr || b.upi_utr || '')).trim();
 
-        if (!isCash && utr.length !== 12) {
-          if (errEl) errEl.textContent = 'Please enter a valid 12-digit UPI transaction reference.';
-          inp?.focus();
-          return;
-        }
+        if (errEl) errEl.textContent = '';
 
         confirmAcceptBtn.disabled = true;
         confirmAcceptBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Confirming &amp; Sending Invoice...';
@@ -3076,31 +3072,30 @@ function renderEnquiriesTable() {
       }
     });
 
-    // UTR typing validation & live digit counter
+    // UTR typing & live counter (optional)
     tbody.addEventListener('input', (e) => {
       if (e.target.matches('.enq-inline-utr-input')) {
         const inp = e.target;
         const ref = inp.dataset.utrRef;
-        const clean = inp.value.replace(/\D/g, '').slice(0, 12);
-        if (clean !== inp.value) inp.value = clean;
-        activeUtrValues[ref] = clean;
+        const val = inp.value.trim();
+        activeUtrValues[ref] = inp.value;
 
         const counter = document.getElementById(`inlineCounter-${ref}`);
         if (counter) {
-          counter.textContent = `${clean.length} / 12`;
-          counter.classList.toggle('is-valid', clean.length === 12);
+          counter.textContent = val.length ? `${val.length} chars` : 'Optional';
+          counter.classList.toggle('is-valid', val.length > 0);
         }
         const errEl = document.getElementById(`inlineError-${ref}`);
         if (errEl) errEl.textContent = '';
 
         const confirmBtn = document.querySelector(`[data-confirm-accept="${ref}"]`);
         if (confirmBtn) {
-          confirmBtn.disabled = clean.length !== 12;
+          confirmBtn.disabled = false;
         }
       }
     });
 
-    // Enter key submits when 12 digits, Escape cancels
+    // Enter key submits, Escape cancels
     tbody.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && e.target.matches('.enq-inline-utr-input')) {
         e.preventDefault();
@@ -3177,9 +3172,8 @@ function renderEnquiriesTable() {
     let inlineSubRowHtml = '';
     if (isThisActing) {
       if (activeInlineAction.type === 'accept') {
-        const curUtr = activeUtrValues[b.ref] !== undefined ? activeUtrValues[b.ref] : (utrStr ? utrStr.replace(/\D/g, '').slice(0, 12) : '');
-        const isUtrReady = curUtr.length === 12;
-        const repCleanUtr = utrStr.replace(/\D/g, '').slice(0, 12);
+        const curUtr = activeUtrValues[b.ref] !== undefined ? activeUtrValues[b.ref] : utrStr;
+        const repCleanUtr = utrStr;
         inlineSubRowHtml = `
           <tr class="enq-inline-row is-acting-accept" id="inlineRow-${b.ref}">
             <td colspan="6">
@@ -3252,24 +3246,22 @@ function renderEnquiriesTable() {
                 ` : `
                   <div class="enq-inline-input-area">
                     <label class="enq-inline-label" for="inlineUtr-${b.ref}">
-                      <strong>${isAdvance ? `Bank Transaction Reference (UTR) for ${advVal} Advance Token` : 'Bank Transaction Reference (UTR)'}</strong>
-                      <span>${isAdvance ? 'Match with bank credit alert for the advance token before accepting' : 'Match with bank credit alert before accepting'}</span>
+                      <strong>${isAdvance ? `Bank Transaction Reference (UTR) for ${advVal} Advance Token (Optional)` : 'Bank Transaction Reference (UTR) (Optional)'}</strong>
+                      <span>${isAdvance ? 'Optional reference from bank credit alert or UPI receipt' : 'Optional reference from bank credit alert or UPI receipt'}</span>
                     </label>
                     <div class="enq-inline-input-row">
                       <input
                         type="text"
                         id="inlineUtr-${b.ref}"
                         class="enq-inline-utr-input"
-                        inputmode="numeric"
-                        maxlength="12"
-                        placeholder="e.g. 523418902412"
+                        placeholder="e.g. 523418902412 (Optional)"
                         autocomplete="off"
                         spellcheck="false"
                         data-utr-ref="${b.ref}"
                         value="${escapeHtml(curUtr)}"
                       />
-                      <span class="enq-inline-counter ${isUtrReady ? 'is-valid' : ''}" id="inlineCounter-${b.ref}">
-                        ${curUtr.length} / 12
+                      <span class="enq-inline-counter ${curUtr ? 'is-valid' : ''}" id="inlineCounter-${b.ref}">
+                        ${curUtr ? `${curUtr.length} chars` : 'Optional'}
                       </span>
                     </div>
 
@@ -3288,7 +3280,6 @@ function renderEnquiriesTable() {
                     type="button"
                     class="enq-inline-btn enq-inline-btn-confirm"
                     data-confirm-accept="${b.ref}"
-                    ${isCash || isUtrReady ? '' : 'disabled'}
                   >
                     <i class="fa-solid fa-check"></i> Confirm &amp; Accept Booking
                   </button>
